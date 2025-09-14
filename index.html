@@ -3,137 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <title>Smart AI Chat</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://js.puter.com/v2/"></script>
-  <style>
-    body {
-      margin: 0;
-      font-family: "Inter", system-ui, sans-serif;
-      background: linear-gradient(135deg, #1e3c72, #2a5298, #6a11cb, #2575fc);
-      background-size: 400% 400%;
-      animation: gradientMove 12s ease infinite;
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-    @keyframes gradientMove {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
-    header {
-      background: rgba(0,0,0,0.4);
-      padding: 16px;
-      text-align: center;
-      font-weight: bold;
-      font-size: 20px;
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid rgba(255,255,255,0.2);
-    }
-    #chat {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-    .msg {
-      max-width: 70%;
-      padding: 14px 18px;
-      border-radius: 16px;
-      line-height: 1.5;
-      white-space: pre-wrap;
-      font-size: 15px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-      animation: fadeIn 0.3s ease;
-    }
-    .user {
-      align-self: flex-end;
-      background: linear-gradient(135deg,#00f2fe,#4facfe);
-      color: #000;
-      font-weight: 500;
-    }
-    .ai {
-      align-self: flex-start;
-      background: rgba(255,255,255,0.1);
-      color: #fff;
-      border: 1px solid rgba(255,255,255,0.2);
-    }
-    #inputArea {
-      display: flex;
-      align-items: center;
-      padding: 12px;
-      background: rgba(0,0,0,0.5);
-      backdrop-filter: blur(12px);
-      gap: 10px;
-    }
-    #userInput {
-      flex: 1;
-      padding: 12px 14px;
-      border-radius: 10px;
-      border: none;
-      font-size: 15px;
-      outline: none;
-      background: rgba(255,255,255,0.15);
-      color: #fff;
-    }
-    #userInput::placeholder {
-      color: rgba(255,255,255,0.6);
-    }
-    #sendBtn {
-      padding: 12px 18px;
-      border: none;
-      border-radius: 10px;
-      background: linear-gradient(135deg,#4facfe,#00f2fe);
-      color: #000;
-      font-weight: bold;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-    #sendBtn:hover {
-      transform: scale(1.05);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    }
-    #dropZone {
-      border: 2px dashed rgba(255,255,255,0.5);
-      border-radius: 12px;
-      padding: 12px;
-      text-align: center;
-      font-size: 14px;
-      margin: 6px 12px;
-      color: rgba(255,255,255,0.7);
-      transition: 0.3s;
-    }
-    #dropZone.dragover {
-      background: rgba(255,255,255,0.15);
-      color: #fff;
-      border-color: #00f2fe;
-    }
-    .chat-img {
-      max-width: 180px;
-      max-height: 180px;
-      border-radius: 10px;
-      margin-top: 8px;
-      border: 1px solid rgba(255,255,255,0.2);
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  </style>
 </head>
-<body>
-  <header>🤖 Smart AI Chat</header>
+<body class="bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white h-screen flex flex-col">
 
-  <div id="chat"></div>
+  <!-- Header -->
+  <header class="px-6 py-4 bg-black/30 backdrop-blur-md border-b border-white/10 text-center font-semibold text-lg">
+    🤖 Smart AI Chat
+  </header>
 
-  <div id="inputArea">
-    <input type="text" id="userInput" placeholder="Type your message...">
-    <button id="sendBtn">Send</button>
+  <!-- Chat Area -->
+  <div id="chat" class="flex-1 overflow-y-auto p-6 space-y-4"></div>
+
+  <!-- Input + Send -->
+  <div class="flex items-center gap-3 p-4 bg-black/40 border-t border-white/10 backdrop-blur-md">
+    <input id="userInput" type="text" placeholder="Type your message..." 
+      class="flex-1 px-4 py-3 rounded-xl bg-gray-800/80 border border-gray-700 placeholder-gray-400 text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+    <button id="sendBtn" 
+      class="px-5 py-3 rounded-xl font-medium bg-gradient-to-r from-purple-500 to-blue-500 hover:opacity-90 transition">
+      Send
+    </button>
   </div>
 
-  <div id="dropZone">Drag & Drop Images Here (optional)</div>
+  <!-- Drag & Drop Zone -->
+  <div id="dropZone" 
+    class="m-3 px-4 py-3 rounded-xl border-2 border-dashed border-gray-600 text-sm text-gray-400 text-center hover:border-purple-400 transition cursor-pointer">
+    Drag & Drop Images Here (optional)
+  </div>
 
   <script>
     const chatBox = document.getElementById("chat");
@@ -142,84 +39,112 @@
     const dropZone = document.getElementById("dropZone");
     const MODEL = "gpt-5-nano";
 
+    // 🔑 System prompt
+    const SYSTEM_PROMPT = `
+You are Smart AI Chat. You are a helpful, conversational AI tutor.
+- Always give clear, step-by-step reasoning.
+- Use proper math notation (e.g., x^2 instead of x2).
+- If images are provided, analyze them as part of the question.
+- Be concise but thorough.
+`;
+
+    // Conversation history
+    let messages = [
+      { role: "system", content: [ { type: "text", text: SYSTEM_PROMPT } ] }
+    ];
     let pendingImages = [];
 
-    function addMessage(role, text, imgs=[]) {
-      const msg = document.createElement("div");
-      msg.className = "msg " + role;
-      msg.textContent = text;
-      if(imgs.length){
-        imgs.forEach(src=>{
-          const img=document.createElement("img");
-          img.src=src;
-          img.className="chat-img";
-          msg.appendChild(document.createElement("br"));
-          msg.appendChild(img);
+    function addMessage(role, text, imgs = []) {
+      const wrapper = document.createElement("div");
+      wrapper.className = `max-w-[75%] px-4 py-3 rounded-2xl whitespace-pre-wrap text-sm shadow-lg ${
+        role === "user" 
+        ? "self-end bg-gradient-to-r from-blue-500 to-purple-500 text-white font-medium" 
+        : "self-start bg-gray-800/80 border border-gray-700 text-gray-200"
+      }`;
+      wrapper.textContent = text;
+
+      // Add images
+      if (imgs.length) {
+        imgs.forEach(src => {
+          const img = document.createElement("img");
+          img.src = src;
+          img.className = "mt-3 max-w-[200px] rounded-xl border border-gray-700";
+          wrapper.appendChild(document.createElement("br"));
+          wrapper.appendChild(img);
         });
       }
-      chatBox.appendChild(msg);
+
+      chatBox.appendChild(wrapper);
       chatBox.scrollTop = chatBox.scrollHeight;
-      return msg;
+      return wrapper;
     }
 
     async function sendMessage() {
       const text = userInput.value.trim();
-      if(!text && pendingImages.length===0) return;
-      userInput.value="";
+      if (!text && pendingImages.length === 0) return;
+      userInput.value = "";
 
       addMessage("user", text, pendingImages);
 
-      const messages=[{role:"user", content:[{type:"text", text}]}];
-      pendingImages.forEach(src=>{
-        messages.push({role:"user", content:[{type:"image", src}]});
-      });
-      pendingImages=[]; dropZone.textContent="Drag & Drop Images Here (optional)";
+      const userEntry = { role: "user", content: [] };
+      if (text) userEntry.content.push({ type: "text", text });
+      pendingImages.forEach(src => userEntry.content.push({ type: "image", src }));
+      messages.push(userEntry);
+
+      pendingImages = [];
+      dropZone.textContent = "Drag & Drop Images Here (optional)";
 
       const aiMsg = addMessage("ai", "Thinking...");
 
-      try{
-        let answer="";
-        const resp=await puter.ai.chat(messages,{model:MODEL,stream:true});
-        for await(const part of resp){
-          if(part?.text){
-            answer+=part.text;
-            aiMsg.textContent=answer;
+      try {
+        let answer = "";
+        const resp = await puter.ai.chat(messages, { model: MODEL, stream: true });
+        for await (const part of resp) {
+          if (part?.text) {
+            answer += part.text;
+            aiMsg.textContent = answer;
           }
         }
-      }catch(e){
-        console.error("AI error:",e);
-        aiMsg.textContent="Error: "+e.message;
+        messages.push({ role: "assistant", content: [{ type: "text", text: answer }] });
+      } catch (e) {
+        console.error("AI error:", e);
+        aiMsg.textContent = "⚠️ Error: " + e.message;
       }
     }
 
-    sendBtn.addEventListener("click",sendMessage);
-    userInput.addEventListener("keydown",e=>{
-      if(e.key==="Enter") sendMessage();
+    sendBtn.addEventListener("click", sendMessage);
+    userInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") sendMessage();
     });
 
-    dropZone.addEventListener("dragover",e=>{
-      e.preventDefault(); dropZone.classList.add("dragover");
+    // Drag & Drop
+    dropZone.addEventListener("dragover", e => {
+      e.preventDefault();
+      dropZone.classList.add("border-purple-400", "text-purple-300");
     });
-    dropZone.addEventListener("dragleave",()=>dropZone.classList.remove("dragover"));
-    dropZone.addEventListener("drop",e=>{
-      e.preventDefault(); dropZone.classList.remove("dragover");
+    dropZone.addEventListener("dragleave", () => {
+      dropZone.classList.remove("border-purple-400", "text-purple-300");
+    });
+    dropZone.addEventListener("drop", e => {
+      e.preventDefault();
+      dropZone.classList.remove("border-purple-400", "text-purple-300");
       handleFiles(e.dataTransfer.files);
     });
-    dropZone.addEventListener("click",()=>{
-      const fileInput=document.createElement("input");
-      fileInput.type="file";
-      fileInput.multiple=true;
-      fileInput.accept="image/*";
-      fileInput.onchange=()=>handleFiles(fileInput.files);
-      fileInput.click();
+    dropZone.addEventListener("click", () => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.multiple = true;
+      input.onchange = () => handleFiles(input.files);
+      input.click();
     });
 
-    function handleFiles(files){
-      [...files].forEach(file=>{
-        const reader=new FileReader();
-        reader.onload=e=>{
+    function handleFiles(files) {
+      [...files].forEach(file => {
+        const reader = new FileReader();
+        reader.onload = e => {
           pendingImages.push(e.target.result);
-          dropZone.textContent = pendingImages.length+" image(s) ready";
+          dropZone.textContent = `${pendingImages.length} image(s) ready`;
         };
         reader.readAsDataURL(file);
       });

@@ -17,18 +17,15 @@
   --glass-bg: rgba(255,255,255,0.05);
   --muted: rgba(255,255,255,0.6);
 }
-body.dark {
-  background: linear-gradient(135deg,#071029 0%, #1d1140 40%, #082032 100%);
-  color: white;
-}
-body.light {
-  background: #f5f5f5;
-  color: #111;
-}
 body {
+  background: linear-gradient(135deg,#071029 0%, #1d1140 40%, #082032 100%);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+body.light {
+  background: #f3f3f3;
+  color: #111;
 }
 .glass {
   background: var(--glass-bg);
@@ -49,10 +46,10 @@ body {
 .chat-scroll::-webkit-scrollbar { width: 8px; height: 8px }
 .chat-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 10px }
 .muted { color: var(--muted); }
-select, input, textarea { transition: background .2s, color .2s; }
+select.dark { background: #111; color: #fff; border: 1px solid rgba(255,255,255,0.2); }
 </style>
 </head>
-<body class="dark h-screen flex text-white">
+<body class="h-screen flex text-white">
 
 <!-- Sidebar -->
 <aside class="w-80 p-4 flex-shrink-0 glass border-r border-white/6 flex flex-col">
@@ -86,7 +83,7 @@ select, input, textarea { transition: background .2s, color .2s; }
   <div class="mt-4 pt-3 border-t border-white/6 text-xs muted">
     <div class="flex items-center justify-between">
       <div>Model</div>
-      <select id="modelSelect" class="bg-gray-900 text-white text-xs rounded p-1">
+      <select id="modelSelect" class="dark text-xs p-1 rounded">
         <option value="gpt-5-nano">gpt-5-nano</option>
         <option value="gpt-4o-mini">gpt-4o-mini</option>
       </select>
@@ -170,7 +167,7 @@ select, input, textarea { transition: background .2s, color .2s; }
         <input id="apiKeyInput" type="text" class="w-full p-3 rounded-md bg-white/5 text-sm" placeholder="Optional — stored locally" />
         <div class="mt-4">
           <label class="text-sm muted mb-1 block">Interface Theme</label>
-          <select id="themeSelect" class="w-full p-2 rounded-md bg-gray-900 text-white text-sm">
+          <select id="themeSelect" class="w-full p-2 rounded-md bg-white/5 text-sm">
             <option value="dark">Dark (recommended)</option>
             <option value="light">Light</option>
           </select>
@@ -178,7 +175,7 @@ select, input, textarea { transition: background .2s, color .2s; }
         <div class="mt-4">
           <label class="inline-flex items-center gap-2 text-sm muted">
             <input id="iframeOverlayToggle" type="checkbox" class="accent-indigo-400">
-            Show iframe overlay on page load
+            Iframe Overlay Mode (full-page)
           </label>
         </div>
       </div>
@@ -193,11 +190,11 @@ select, input, textarea { transition: background .2s, color .2s; }
 
 <script>
 lucide.createIcons();
-
 const UID = ()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const qs = s => document.querySelector(s);
 const qsa = s => Array.from(document.querySelectorAll(s));
 
+/* Elements */
 const chatListEl = qs('#chatList');
 const chatArea = qs('#chatArea');
 const composer = qs('#composer');
@@ -224,18 +221,25 @@ const exportAllBtn = qs('#exportAllBtn');
 const clearAllBtn = qs('#clearAllBtn');
 const iframeOverlayToggle = qs('#iframeOverlayToggle');
 
-let chats = [];
+/* App data */
+let chats = []; 
 let activeChatId = null;
 const STORAGE_KEY = 'smartai_chats_v2';
-const SETTINGS_KEY = 'smartai_settings_v3';
+const SETTINGS_KEY = 'smartai_settings_v2';
 const DEFAULT_SYSTEM_PROMPT = `You are Smart AI Chat+. You are a clear, helpful tutor and assistant.
 - Explain step-by-step when teaching.
 - Use proper math notation (x^2 not x2).
 - If context exists, use it to give better answers.`;
 
-// ----------------- SETTINGS -----------------
+/* Settings persistence */
 function saveSettingsToStorage(){ 
-  const s = { systemPrompt: systemPromptInput.value, apiKey: apiKeyInput.value, model: modelSelect.value, theme: themeSelect.value, iframeOverlay: iframeOverlayToggle.checked };
+  const s = { 
+    systemPrompt: systemPromptInput.value, 
+    apiKey: apiKeyInput.value, 
+    model: modelSelect.value, 
+    theme: themeSelect.value,
+    iframeOverlay: iframeOverlayToggle.checked
+  };
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
 }
 function loadSettingsFromStorage(){
@@ -244,21 +248,24 @@ function loadSettingsFromStorage(){
   apiKeyInput.value = s.apiKey || '';
   modelSelect.value = s.model || 'gpt-5-nano';
   themeSelect.value = s.theme || 'dark';
-  iframeOverlayToggle.checked = !!s.iframeOverlay;
-  applyTheme(s.theme||'dark');
-}
-function applyTheme(theme){
-  document.body.classList.remove('dark','light');
-  document.body.classList.add(theme);
+  iframeOverlayToggle.checked = s.iframeOverlay || false;
+  applyTheme(s.theme || 'dark');
 }
 
-// ----------------- CHAT PERSISTENCE -----------------
+/* Theme */
+function applyTheme(theme){
+  if(theme==='light') document.body.classList.add('light');
+  else document.body.classList.remove('light');
+}
+
+/* Chats persistence */
 function saveChats(){ if(!persistToggle.checked) return; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(chats)); } catch(e){ console.warn('Save error', e); } }
 function loadChats(){ const raw = localStorage.getItem(STORAGE_KEY); if(!raw) { chats=[]; return; } try { chats = JSON.parse(raw); } catch(e){ chats=[]; } }
 
 loadSettingsFromStorage();
 loadChats();
 
+/* Helpers */
 function now(){ return Date.now(); }
 function safeTextFromMessage(m){ return m.content.find(c=>c.type==='text')?.text || ''; }
 function pushMessageToChat(chatId, role, text){
@@ -268,23 +275,22 @@ function pushMessageToChat(chatId, role, text){
 }
 function escapeHtml(s){ return (s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
 
+/* Rendering */
 function renderChatList(filter=''){
-  chatListEl.innerHTML='';
-  [...chats].sort((a,b)=> (b.pinned?1:0)-(a.pinned?1:0) || (b.updatedAt||0)-(a.updatedAt||0)).forEach(chat=>{
+  chatListEl.innerHTML=''; 
+  [...chats].sort((a,b)=> (b.updatedAt||0)-(a.updatedAt||0)).forEach(chat=>{
     if(filter && !(chat.title||'').toLowerCase().includes(filter.toLowerCase())) return;
     const item = document.createElement('div');
     item.className='flex items-center gap-3 p-2 rounded-md hover:bg-white/5 cursor-pointer transition';
     if(chat.id===activeChatId) item.classList.add('bg-white/5');
     item.innerHTML = `
-      <div class="w-9 h-9 rounded-lg ${chat.pinned?'bg-yellow-500':'bg-white/6'} flex items-center justify-center">
-        <i data-lucide="message-circle" class="w-4 h-4 text-white"></i>
-      </div>
+      <div class="w-9 h-9 rounded-lg bg-white/6 flex items-center justify-center"><i data-lucide="message-circle" class="w-4 h-4 text-white"></i></div>
       <div class="flex-1 min-w-0">
         <div class="text-sm font-medium truncate">${escapeHtml(chat.title||'New Chat')}</div>
         <div class="text-xs muted">${chat.updatedAt ? new Date(chat.updatedAt).toLocaleString() : 'No messages'}</div>
       </div>
       <div class="flex items-center gap-2">
-        <button data-action="pin" data-id="${chat.id}" class="p-1 rounded hover:bg-white/5"><i data-lucide="${chat.pinned?'star':'star'}" class="w-4 h-4 text-white"></i></button>
+        <button data-action="pin" data-id="${chat.id}" class="p-1 rounded hover:bg-white/5"><i data-lucide="star" class="w-4 h-4 text-white"></i></button>
         <button data-action="del" data-id="${chat.id}" class="p-1 rounded hover:bg-red-600/20"><i data-lucide="trash-2" class="w-4 h-4 text-white"></i></button>
       </div>
     `;
@@ -325,6 +331,7 @@ function appendMessageToDOM(message, isTyping=false){
   return bubble;
 }
 
+/* Chat operations */
 function createChat(initialText){
   const id = UID();
   const chat = { id, title: initialText?initialText.slice(0,40):'New Chat', messages:[{role:'system', content:[{type:'text', text: systemPromptInput.value || DEFAULT_SYSTEM_PROMPT}], ts: now()}], pinned:false, updatedAt: now()};
@@ -336,77 +343,36 @@ function openChat(id){ activeChatId=id; renderChatList(searchInput.value); rende
 function deleteChat(id){ chats = chats.filter(c=>c.id!==id); if(activeChatId===id) activeChatId=chats[0]?.id||null; saveChats(); renderChatList(searchInput.value); renderActiveChat(); }
 function togglePin(id){ const c=chats.find(x=>x.id===id); if(!c) return; c.pinned=!c.pinned; saveChats(); renderChatList(searchInput.value); }
 
-// ----------------- IFRAME OVERLAY -----------------
-function showIframeOverlay(){
-  const overlay=document.createElement('div');
-  overlay.style.position='fixed';
-  overlay.style.top=0; overlay.style.left=0;
-  overlay.style.width='100vw'; overlay.style.height='100vh';
-  overlay.style.zIndex='9999';
-  overlay.style.backgroundColor='white';
-  const iframe=document.createElement('iframe');
-  iframe.src=window.location.href;
-  iframe.style.width='100%'; iframe.style.height='100%'; iframe.style.border='none';
-  overlay.appendChild(iframe);
-  document.body.innerHTML=''; // clear page
-  document.body.appendChild(overlay);
+/* Drag and drop images */
+composer.addEventListener('dragover', e=>{ e.preventDefault(); });
+composer.addEventListener('drop', async e=>{
+  e.preventDefault();
+  const chat = chats.find(c=>c.id===activeChatId); if(!chat) return;
+  for(const file of e.dataTransfer.files){
+    if(file.type.startsWith('image/')){
+      const url = URL.createObjectURL(file);
+      chat.messages.push({role:'user', content:[{type:'image', url}], ts: now()});
+      appendMessageToDOM({role:'user', content:[{type:'image', url}]});
+    }
+  }
+  saveChats();
+});
+
+/* Iframe Overlay Mode */
+function showIframeOverlay() {
+  const newWindow = window.open('about:blank', '_blank');
+  if (!newWindow) return;
+  newWindow.document.write(`
+    <style>
+      html, body { margin:0; padding:0; height:100%; overflow:hidden; }
+      iframe { width:100vw; height:100vh; border:none; }
+    </style>
+    <iframe src="${window.location.href}"></iframe>
+  `);
+  newWindow.document.close();
 }
 
-// ----------------- EVENTS -----------------
-sendBtn.addEventListener('click', sendPrompt);
-composer.addEventListener('keydown', e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendPrompt(); } });
-newChatBtn.addEventListener('click', ()=>createChat());
-newChatBottom.addEventListener('click', ()=>createChat());
-searchInput.addEventListener('input', ()=>renderChatList(searchInput.value));
-copyBtn.addEventListener('click', ()=>{
-  const chat=chats.find(c=>c.id===activeChatId); if(!chat) return;
-  const text = chat.messages.map(m=>`${m.role.toUpperCase()}: ${safeTextFromMessage(m)}`).join('\n\n');
-  navigator.clipboard.writeText(text).then(()=> statusTxt.textContent='Copied');
-});
-downloadBtn.addEventListener('click', ()=>{
-  const chat=chats.find(c=>c.id===activeChatId); if(!chat) return;
-  const blob=new Blob([JSON.stringify(chat,null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`${(chat.title||'chat').replace(/\s+/g,'_')}.json`; a.click(); URL.revokeObjectURL(url);
-});
-exportAllBtn.addEventListener('click', ()=>{
-  const blob=new Blob([JSON.stringify(chats,null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='smartai_all_chats.json'; a.click(); URL.revokeObjectURL(url);
-});
-clearAllBtn.addEventListener('click', ()=>{ if(!confirm('Delete ALL chats from local storage?')) return; chats=[]; activeChatId=null; saveChats(); renderChatList(); renderActiveChat(); statusTxt.textContent='Cleared'; });
-
-settingsBtn.addEventListener('click', ()=>settingsModal.classList.remove('hidden'));
-closeSettings.addEventListener('click', ()=>settingsModal.classList.add('hidden'));
-cancelSettings.addEventListener('click', ()=>settingsModal.classList.add('hidden'));
-saveSettings.addEventListener('click', ()=>{
-  saveSettingsToStorage();
-  applyTheme(themeSelect.value);
-  settingsModal.classList.add('hidden');
-  statusTxt.textContent='Settings saved';
-});
-
-chatListEl.addEventListener('click', e=>{
-  const btn=e.target.closest('button[data-action]'); if(!btn) return;
-  const id=btn.dataset.id, action=btn.dataset.action;
-  if(action==='del'){ if(confirm('Delete this chat?')) deleteChat(id); }
-  if(action==='pin'){ togglePin(id); }
-});
-
-document.addEventListener('keydown', e=>{
-  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); searchInput.focus(); searchInput.select(); }
-  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='n'){ e.preventDefault(); createChat(); }
-});
-
-// ----------------- INIT -----------------
-function init(){
-  loadSettingsFromStorage();
-  if(iframeOverlayToggle.checked){ showIframeOverlay(); return; }
-  if(!chats.length) createChat(); else { activeChatId=chats[0].id; renderChatList(); renderActiveChat(); }
-  lucide.createIcons(); statusTxt.textContent='Ready';
-}
-
-init();
-
-// ----------------- AI STREAMING -----------------
+/* AI integration */
 async function waitForPuter(){ for(let i=0;i<50;i++){ if(window.puter?.ai) return true; await new Promise(r=>setTimeout(r,200)); } return !!(window.puter?.ai); }
 async function sendToAIStreaming(chat){
   const messagesForAPI = chat.messages.map(m=>({role:m.role, content:m.content}));
@@ -431,6 +397,8 @@ async function sendToAIStreaming(chat){
     } catch(e2){ throw e2?.error?.message||e2?.message||JSON.stringify(e2); }
   }
 }
+
+/* Send prompt */
 async function sendPrompt(){
   const chat = chats.find(c=>c.id===activeChatId) || createChat();
   const text = composer.value.trim(); if(!text) return; composer.value='';
@@ -449,6 +417,64 @@ async function sendPrompt(){
     statusTxt.textContent='Error';
   }
 }
+
+/* UI events */
+sendBtn.addEventListener('click', sendPrompt);
+composer.addEventListener('keydown', e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendPrompt(); } });
+newChatBtn.addEventListener('click', ()=>createChat());
+newChatBottom.addEventListener('click', ()=>createChat());
+searchInput.addEventListener('input', ()=>renderChatList(searchInput.value));
+copyBtn.addEventListener('click', ()=>{
+  const chat=chats.find(c=>c.id===activeChatId); if(!chat) return;
+  const text = chat.messages.map(m=>`${m.role.toUpperCase()}: ${safeTextFromMessage(m)}`).join('\n\n');
+  navigator.clipboard.writeText(text).then(()=> statusTxt.textContent='Copied');
+});
+downloadBtn.addEventListener('click', ()=>{
+  const chat=chats.find(c=>c.id===activeChatId); if(!chat) return;
+  const blob=new Blob([JSON.stringify(chat,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`${(chat.title||'chat').replace(/\s+/g,'_')}.json`; a.click(); URL.revokeObjectURL(url);
+});
+exportAllBtn.addEventListener('click', ()=>{
+  const blob=new Blob([JSON.stringify(chats,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='smartai_all_chats.json'; a.click(); URL.revokeObjectURL(url);
+});
+clearAllBtn.addEventListener('click', ()=>{ if(!confirm('Delete ALL chats from local storage?')) return; chats=[]; activeChatId=null; saveChats(); renderChatList(); renderActiveChat(); statusTxt.textContent='Cleared'; });
+
+/* Settings modal */
+settingsBtn.addEventListener('click', ()=>settingsModal.classList.remove('hidden'));
+closeSettings.addEventListener('click', ()=>settingsModal.classList.add('hidden'));
+cancelSettings.addEventListener('click', ()=>settingsModal.classList.add('hidden'));
+saveSettings.addEventListener('click', ()=>{
+  saveSettingsToStorage();
+  applyTheme(themeSelect.value);
+  if(iframeOverlayToggle.checked) showIframeOverlay();
+  settingsModal.classList.add('hidden');
+  statusTxt.textContent='Settings saved';
+});
+
+chatListEl.addEventListener('click', e=>{
+  const btn=e.target.closest('button[data-action]'); if(!btn) return;
+  const id=btn.dataset.id, action=btn.dataset.action;
+  if(action==='del'){ if(confirm('Delete this chat?')) deleteChat(id); }
+  if(action==='pin'){ togglePin(id); }
+});
+
+/* Keyboard shortcuts */
+document.addEventListener('keydown', e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); searchInput.focus(); searchInput.select(); }
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='n'){ e.preventDefault(); createChat(); }
+});
+
+/* Initialize */
+function init(){ 
+  loadSettingsFromStorage(); 
+  if(iframeOverlayToggle.checked){ showIframeOverlay(); return; }
+  if(!chats.length) createChat(); else { activeChatId=chats[0].id; renderChatList(); renderActiveChat(); }
+  lucide.createIcons(); 
+  statusTxt.textContent='Ready';
+}
+init();
+
 </script>
 </body>
 </html>

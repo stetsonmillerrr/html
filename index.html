@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Smart AI Chat</title>
+  <script src="https://js.puter.com/v2/"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Inter", system-ui, sans-serif;
+      background: linear-gradient(135deg, #1e3c72, #2a5298, #6a11cb, #2575fc);
+      background-size: 400% 400%;
+      animation: gradientMove 12s ease infinite;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    @keyframes gradientMove {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    header {
+      background: rgba(0,0,0,0.4);
+      padding: 16px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 20px;
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+    #chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .msg {
+      max-width: 70%;
+      padding: 14px 18px;
+      border-radius: 16px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      font-size: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      animation: fadeIn 0.3s ease;
+    }
+    .user {
+      align-self: flex-end;
+      background: linear-gradient(135deg,#00f2fe,#4facfe);
+      color: #000;
+      font-weight: 500;
+    }
+    .ai {
+      align-self: flex-start;
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    #inputArea {
+      display: flex;
+      align-items: center;
+      padding: 12px;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(12px);
+      gap: 10px;
+    }
+    #userInput {
+      flex: 1;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: none;
+      font-size: 15px;
+      outline: none;
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+    }
+    #userInput::placeholder {
+      color: rgba(255,255,255,0.6);
+    }
+    #sendBtn {
+      padding: 12px 18px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg,#4facfe,#00f2fe);
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    #sendBtn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    #dropZone {
+      border: 2px dashed rgba(255,255,255,0.5);
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+      font-size: 14px;
+      margin: 6px 12px;
+      color: rgba(255,255,255,0.7);
+      transition: 0.3s;
+    }
+    #dropZone.dragover {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+      border-color: #00f2fe;
+    }
+    .chat-img {
+      max-width: 180px;
+      max-height: 180px;
+      border-radius: 10px;
+      margin-top: 8px;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <header>🤖 Smart AI Chat</header>
+
+  <div id="chat"></div>
+
+  <div id="inputArea">
+    <input type="text" id="userInput" placeholder="Type your message...">
+    <button id="sendBtn">Send</button>
+  </div>
+
+  <div id="dropZone">Drag & Drop Images Here (optional)</div>
+
+  <script>
+    const chatBox = document.getElementById("chat");
+    const userInput = document.getElementById("userInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const dropZone = document.getElementById("dropZone");
+    const MODEL = "gpt-5-nano";
+
+    let pendingImages = [];
+
+    function addMessage(role, text, imgs=[]) {
+      const msg = document.createElement("div");
+      msg.className = "msg " + role;
+      msg.textContent = text;
+      if(imgs.length){
+        imgs.forEach(src=>{
+          const img=document.createElement("img");
+          img.src=src;
+          img.className="chat-img";
+          msg.appendChild(document.createElement("br"));
+          msg.appendChild(img);
+        });
+      }
+      chatBox.appendChild(msg);
+      chatBox.scrollTop = chatBox.scrollHeight;
+      return msg;
+    }
+
+    async function sendMessage() {
+      const text = userInput.value.trim();
+      if(!text && pendingImages.length===0) return;
+      userInput.value="";
+
+      addMessage("user", text, pendingImages);
+
+      const messages=[{role:"user", content:[{type:"text", text}]}];
+      pendingImages.forEach(src=>{
+        messages.push({role:"user", content:[{type:"image", src}]});
+      });
+      pendingImages=[]; dropZone.textContent="Drag & Drop Images Here (optional)";
+
+      const aiMsg = addMessage("ai", "Thinking...");
+
+      try{
+        let answer="";
+        const resp=await puter.ai.chat(messages,{model:MODEL,stream:true});
+        for await(const part of resp){
+          if(part?.text){
+            answer+=part.text;
+            aiMsg.textContent=answer;
+          }
+        }
+      }catch(e){
+        console.error("AI error:",e);
+        aiMsg.textContent="Error: "+e.message;
+      }
+    }
+
+    sendBtn.addEventListener("click",sendMessage);
+    userInput.addEventListener("keydown",e=>{
+      if(e.key==="Enter") sendMessage();
+    });
+
+    dropZone.addEventListener("dragover",e=>{
+      e.preventDefault(); dropZone.classList.add("dragover");
+    });
+    dropZone.addEventListener("dragleave",()=>dropZone.classList.remove("dragover"));
+    dropZone.addEventListener("drop",e=>{
+      e.preventDefault(); dropZone.classList.remove("dragover");
+      handleFiles(e.dataTransfer.files);
+    });
+    dropZone.addEventListener("click",()=>{
+      const fileInput=document.createElement("input");
+      fileInput.type="file";
+      fileInput.multiple=true;
+      fileInput.accept="image/*";
+      fileInput.onchange=()=>handleFiles(fileInput.files);
+      fileInput.click();
+    });
+
+    function handleFiles(files){
+      [...files].forEach(file=>{
+        const reader=new FileReader();
+        reader.onload=e=>{
+          pendingImages.push(e.target.result);
+          dropZone.textContent = pendingImages.length+" image(s) ready";
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  </script>
+</body>
+</html>

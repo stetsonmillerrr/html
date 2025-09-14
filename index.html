@@ -3,56 +3,49 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Smart AI Chat+ (Glassy, Persistent, Smart)</title>
+<title>Smart AI Chat+ (Polished & Smart)</title>
 
-<!-- Tailwind CSS -->
+<!-- Tailwind -->
 <script src="https://cdn.tailwindcss.com"></script>
-<!-- Puter JS -->
+
+<!-- Puter AI -->
 <script src="https://js.puter.com/v2/"></script>
+
 <!-- Lucide icons -->
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
+<!-- Marked for Markdown -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<!-- KaTeX for math rendering -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
 <style>
-  /* Global polish */
   :root{
-    --glass-bg: rgba(255,255,255,0.04);
+    --glass: rgba(255,255,255,0.04);
     --muted: rgba(255,255,255,0.6);
   }
-  body {
-    background: linear-gradient(135deg,#071029 0%, #1d1140 40%, #082032 100%);
+  body{
     font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-    -webkit-font-smoothing:antialiased;
-    -moz-osx-font-smoothing:grayscale;
+    background: linear-gradient(135deg,#071029 0%, #1d1140 40%, #082032 100%);
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    color: white;
   }
-  .glass {
-    background: var(--glass-bg);
-    backdrop-filter: blur(10px) saturate(120%);
-    -webkit-backdrop-filter: blur(10px) saturate(120%);
-    border: 1px solid rgba(255,255,255,0.06);
-  }
-  .typing-dots span {
-    display:inline-block;
-    width:7px;height:7px;border-radius:999px;margin-right:5px;background:white;opacity:.85;
-    animation: bounce 1.2s infinite;
-  }
-  .typing-dots span:nth-child(2){ animation-delay:.14s }
-  .typing-dots span:nth-child(3){ animation-delay:.28s }
-  @keyframes bounce { 0%,80%,100%{transform:scale(.6);opacity:.6}40%{transform:scale(1);opacity:1} }
-
-  /* simple fade-in */
-  .fade-in { animation: fadeIn .28s cubic-bezier(.2,.9,.3,1) both; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px) } to { opacity:1; transform: translateY(0) } }
-
-  /* scroll bar */
-  .chat-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.12) transparent; }
-  .chat-scroll::-webkit-scrollbar { width: 8px; height: 8px }
-  .chat-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 10px }
-
-  /* small helpers */
-  .muted { color: var(--muted); }
+  .glass{ background: var(--glass); backdrop-filter: blur(10px) saturate(120%); -webkit-backdrop-filter: blur(10px) saturate(120%); border: 1px solid rgba(255,255,255,0.06); }
+  .muted{ color: var(--muted); }
+  .typing-dots span{display:inline-block;width:7px;height:7px;margin-right:5px;border-radius:999px;background:white;opacity:.9;animation:bounce 1.15s infinite}
+  .typing-dots span:nth-child(2){animation-delay:.14s}.typing-dots span:nth-child(3){animation-delay:.28s}
+  @keyframes bounce{0%,80%,100%{transform:scale(.6);opacity:.5}40%{transform:scale(1);opacity:1}}
+  .fade-in{animation:fadeIn .28s cubic-bezier(.2,.9,.3,1) both}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .chat-scroll{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.12) transparent}
+  .chat-scroll::-webkit-scrollbar{width:8px;height:8px}.chat-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:10px}
+  .katex{font-size:1.02em}
 </style>
 </head>
-<body class="h-screen flex text-white">
+<body class="h-screen flex">
 
 <!-- Sidebar -->
 <aside class="w-80 p-4 flex-shrink-0 glass border-r border-white/6 flex flex-col">
@@ -62,52 +55,44 @@
         <i data-lucide="zap" class="w-5 h-5 text-white"></i>
       </div>
       <div>
-        <div class="font-semibold">Smart AI Chat+</div>
-        <div class="text-xs muted">Glassy. Persistent. Smarter.</div>
+        <div class="font-semibold text-sm">Smart AI Chat+</div>
+        <div class="text-xs muted">Smarter, persistent, glassy</div>
       </div>
     </div>
     <div class="flex items-center gap-2">
-      <button id="newChatBtn" class="p-2 rounded-md hover:bg-white/5 transition" title="New Chat">
-        <i data-lucide="plus" class="w-5 h-5 text-white"></i>
-      </button>
-      <button id="settingsBtn" class="p-2 rounded-md hover:bg-white/5 transition" title="Settings">
-        <i data-lucide="settings" class="w-5 h-5 text-white"></i>
-      </button>
+      <button id="newChatBtn" class="p-2 rounded-md hover:bg-white/5" title="New Chat"><i data-lucide="plus" class="w-5 h-5 text-white"></i></button>
+      <button id="settingsBtn" class="p-2 rounded-md hover:bg-white/5" title="Settings"><i data-lucide="settings" class="w-5 h-5 text-white"></i></button>
     </div>
   </div>
 
   <div class="mb-3">
-    <input id="searchInput" placeholder="Search chats (Ctrl/Cmd+K)"
-      class="w-full px-3 py-2 rounded-lg bg-white/5 placeholder:text-white/60 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+    <input id="searchInput" placeholder="Search chats (Ctrl/Cmd+K)" class="w-full px-3 py-2 rounded-lg bg-white/5 placeholder:text-white/60 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
   </div>
 
   <div id="chatList" class="flex-1 overflow-y-auto space-y-2 p-1"></div>
 
   <div class="mt-4 pt-3 border-t border-white/6 text-xs muted">
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between mb-2">
       <div>Model</div>
       <select id="modelSelect" class="bg-transparent text-white text-xs">
         <option value="gpt-5-nano">gpt-5-nano</option>
         <option value="gpt-4o-mini">gpt-4o-mini</option>
       </select>
     </div>
-    <div class="mt-3 flex gap-2">
-      <button id="exportAllBtn" class="flex-1 px-3 py-2 rounded-md bg-white/6 hover:bg-white/8 text-sm">Export All</button>
+    <div class="flex gap-2">
+      <button id="exportAllBtn" class="flex-1 px-3 py-2 rounded-md bg-white/6 hover:bg-white/8 text-sm">Export</button>
       <button id="clearAllBtn" class="px-3 py-2 rounded-md bg-red-600/20 hover:bg-red-600/30 text-sm">Clear</button>
     </div>
     <div class="mt-3 text-xs muted">Tip: Ctrl/Cmd+N = New Chat • Ctrl/Cmd+K = Focus search</div>
   </div>
 </aside>
 
-<!-- Main area -->
+<!-- Main -->
 <main class="flex-1 flex flex-col">
 
   <!-- Header -->
   <header class="px-6 py-3 border-b border-white/6 glass flex items-center justify-between">
     <div class="flex items-center gap-4">
-      <button id="sidebarToggle" class="p-2 rounded-md hover:bg-white/5 hidden lg:inline-flex">
-        <i data-lucide="menu" class="w-5 h-5 text-white"></i>
-      </button>
       <div>
         <div id="chatTitle" class="text-lg font-semibold">New Chat</div>
         <div id="chatMeta" class="text-xs muted">AI tutor · persistent memory</div>
@@ -116,39 +101,27 @@
 
     <div class="flex items-center gap-2">
       <div id="statusTxt" class="text-sm muted">Ready</div>
-      <button id="copyBtn" class="p-2 rounded-md hover:bg-white/5" title="Copy chat">
-        <i data-lucide="copy" class="w-5 h-5 text-white"></i>
-      </button>
-      <button id="downloadBtn" class="p-2 rounded-md hover:bg-white/5" title="Download chat">
-        <i data-lucide="download" class="w-5 h-5 text-white"></i>
-      </button>
+      <button id="copyBtn" class="p-2 rounded-md hover:bg-white/5"><i data-lucide="copy" class="w-5 h-5 text-white"></i></button>
+      <button id="downloadBtn" class="p-2 rounded-md hover:bg-white/5"><i data-lucide="download" class="w-5 h-5 text-white"></i></button>
     </div>
   </header>
 
-  <!-- Messages area -->
-  <section id="chatArea" class="flex-1 overflow-y-auto p-6 chat-scroll space-y-4">
-    <!-- messages go here -->
-  </section>
+  <!-- Chat area -->
+  <section id="chatArea" class="flex-1 overflow-y-auto p-6 chat-scroll space-y-4"></section>
 
   <!-- Composer -->
   <div class="p-4 border-t border-white/6 glass">
-    <div class="flex gap-2">
-      <textarea id="composer" rows="2" placeholder="Type your message... (Shift+Enter = newline)"
-        class="flex-1 p-3 rounded-xl bg-white/5 text-sm placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+    <div class="flex gap-3">
+      <textarea id="composer" rows="2" placeholder="Type your message... (Shift+Enter = newline)" class="flex-1 p-3 rounded-xl bg-white/5 text-sm placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
       <div class="flex flex-col gap-2">
-        <button id="sendBtn" class="p-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 hover:scale-[1.03] transition" title="Send">
-          <i data-lucide="send" class="w-5 h-5 text-white"></i>
-        </button>
+        <button id="sendBtn" class="p-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 hover:scale-[1.03] transition"><i data-lucide="send" class="w-5 h-5 text-white"></i></button>
         <button id="newChatBottom" class="px-3 py-1 rounded-md bg-white/6 hover:bg-white/8 text-xs">New</button>
       </div>
     </div>
     <div class="mt-2 flex items-center justify-between text-xs muted">
       <div id="usageInfo">Messages saved locally</div>
       <div>
-        <label class="inline-flex items-center gap-2 text-xs muted">
-          <input id="persistToggle" type="checkbox" checked class="accent-indigo-400">
-          Persist
-        </label>
+        <label class="inline-flex items-center gap-2 text-xs muted"><input id="persistToggle" type="checkbox" checked class="accent-indigo-400"> Persist</label>
       </div>
     </div>
   </div>
@@ -165,7 +138,7 @@
     <div class="grid grid-cols-2 gap-4">
       <div>
         <label class="text-sm muted mb-1 block">System Prompt (first prompt)</label>
-        <textarea id="systemPrompt" rows="8" class="w-full p-3 rounded-md bg-white/5 text-sm"></textarea>
+        <textarea id="systemPrompt" rows="6" class="w-full p-3 rounded-md bg-white/5 text-sm"></textarea>
       </div>
       <div>
         <label class="text-sm muted mb-1 block">Puter API Key (optional)</label>
@@ -173,7 +146,7 @@
         <div class="mt-4">
           <label class="text-sm muted mb-1 block">Interface Theme</label>
           <select id="themeSelect" class="w-full p-2 rounded-md bg-white/5 text-sm">
-            <option value="dark">Dark (recommended)</option>
+            <option value="dark">Dark</option>
             <option value="light">Light</option>
           </select>
         </div>
@@ -188,14 +161,15 @@
 </div>
 
 <script>
-/* ========= Utility & State ========= */
+/* -------------------------
+   Utilities & initialization
+   ------------------------- */
 lucide.createIcons();
 
-const UID = ()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const UID = ()=> Date.now().toString(36) + Math.random().toString(36).slice(2,8);
 const qs = s => document.querySelector(s);
 const qsa = s => Array.from(document.querySelectorAll(s));
 
-/* Elements */
 const chatListEl = qs('#chatList');
 const chatArea = qs('#chatArea');
 const composer = qs('#composer');
@@ -220,64 +194,104 @@ const apiKeyInput = qs('#apiKeyInput');
 const themeSelect = qs('#themeSelect');
 const exportAllBtn = qs('#exportAllBtn');
 const clearAllBtn = qs('#clearAllBtn');
+const statusText = qs('#statusTxt');
 const searchEl = qs('#searchInput');
 const newChatLocalBtn = qs('#newChatBottom');
 
-/* App data */
-let chats = []; // [{id, title, messages: [{role, content:[{type,text}]}], pinned, updatedAt}]
-let activeChatId = null;
-const STORAGE_KEY = 'smartai_chats_v2';
-const SETTINGS_KEY = 'smartai_settings_v2';
-const DEFAULT_SYSTEM_PROMPT = `You are Smart AI Chat+. You are a clear, helpful tutor and assistant.
-- Explain step-by-step when teaching.
-- Use proper math notation (x^2 not x2).
-- If context exists, use it to give better answers.`;
+const STORAGE_KEY = 'smartai_chats_v3';
+const SETTINGS_KEY = 'smartai_settings_v3';
+const DEFAULT_SYSTEM_PROMPT = `You are Smart AI Chat+. You are a helpful, conversational AI tutor and assistant.
+- Give clear, step-by-step reasoning when teaching.
+- Use proper math notation (x^2, fractions, etc.).
+- If context exists, use it to improve answers.
+- Respond helpfully and concisely.`;
 
-function saveSettingsToStorage(){ 
-  const s = { systemPrompt: systemPromptInput.value, apiKey: apiKeyInput.value, model: modelSelect.value, theme: themeSelect.value };
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
-}
-function loadSettingsFromStorage(){
+let chats = []; // array of chat objects
+let activeChatId = null;
+
+/* Load & Save */
+function loadSettings(){
   const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
   systemPromptInput.value = s.systemPrompt || DEFAULT_SYSTEM_PROMPT;
   apiKeyInput.value = s.apiKey || '';
   modelSelect.value = s.model || modelSelect.value;
   themeSelect.value = s.theme || 'dark';
 }
-
-/* Persistence for chats */
-function saveChats(){
-  if(!persistToggle.checked) return;
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(chats)); } catch(e){ console.warn('Save error', e); }
+function saveSettings(){
+  const s = { systemPrompt: systemPromptInput.value, apiKey: apiKeyInput.value, model: modelSelect.value, theme: themeSelect.value };
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
 }
 function loadChats(){
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if(!raw) { chats=[]; return; }
-  try { chats = JSON.parse(raw); } catch(e){ chats = []; }
+  try{ chats = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch(e){ chats=[]; }
 }
-
-/* Initialize settings & chats */
-loadSettingsFromStorage();
-loadChats();
+function saveChats(){
+  if(!persistToggle.checked) return;
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(chats)); } catch(e){ console.warn('save error', e); }
+}
 
 /* Helpers */
 function now(){ return Date.now(); }
-function safeTextFromMessage(m){ return m.content.find(c=>c.type==='text')?.text || ''; }
-function pushMessageToChat(chatId, role, text){
-  const chat = chats.find(c=>c.id===chatId);
-  if(!chat) return;
-  const msg = { role, content: [{ type:'text', text }], ts: now() };
-  chat.messages.push(msg);
-  chat.updatedAt = now();
-  saveChats();
-  renderChatList(searchEl.value);
-  renderActiveChat();
+function escapeHtml(s){ return (s||'').toString().replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+function safeTextFromMsg(m){ return m.content.find(c=>c.type==='text')?.text || ''; }
+function autoTitleFromFirstUser(chat){ const first = chat.messages.find(m=>m.role==='user'); return first ? (safeTextFromMsg(first).slice(0,60) + (safeTextFromMsg(first).length>60?'…':'')) : 'New Chat'; }
+
+/* Convert simple math notation for AI (x2 -> x^2, 2x2 -> 2*x^2) */
+function convertMathNotationForAI(text){
+  if(!text) return text;
+  let t = text;
+  // insert * when missing (2x -> 2*x), but avoid inside words
+  t = t.replace(/(\d)([a-zA-Z])/g, '$1*$2');
+  // convert letter followed by number to caret (x2 -> x^2)
+  t = t.replace(/([a-zA-Z])(\d+)/g, '$1^$2');
+  return t;
 }
 
-/* UI Rendering */
+/* Render a message (markdown + math) */
+function renderMessageHTML(rawText){
+  // allow markdown via marked and KaTeX auto-render for inline math ($...$)
+  const md = marked.parse(rawText || '');
+  // create a container and run auto-render on it
+  const container = document.createElement('div');
+  container.innerHTML = md;
+  // render math in element (auto-render will look for $...$ or \( ... \))
+  try {
+    renderMathInElement(container, {
+      delimiters: [
+        {left: "$$", right: "$$", display: true},
+        {left: "$", right: "$", display: false},
+        {left: "\\(", right: "\\)", display: false},
+        {left: "\\[", right: "\\]", display: true}
+      ],
+      throwOnError: false
+    });
+  } catch(e){
+    console.warn('KaTeX render error', e);
+  }
+  return container.innerHTML;
+}
+
+/* Create empty chat object */
+function createChatObject(initialText){
+  const id = UID();
+  const chat = {
+    id,
+    title: initialText ? (initialText.slice(0,40) + (initialText.length>40?'…':'')) : 'New Chat',
+    pinned: false,
+    updatedAt: now(),
+    messages: [
+      { role: 'system', content: [{ type:'text', text: systemPromptInput.value || DEFAULT_SYSTEM_PROMPT }], ts: now() }
+    ]
+  };
+  if(initialText){
+    chat.messages.push({ role:'user', content:[{type:'text', text:initialText}], ts: now() });
+  }
+  return chat;
+}
+
+/* UI render: chat list */
 function renderChatList(filter=''){
   chatListEl.innerHTML = '';
-  const sorted = [...chats].sort((a,b)=> {
+  const sorted = chats.slice().sort((a,b)=>{
     if((b.pinned?1:0) - (a.pinned?1:0)) return (b.pinned?1:0)-(a.pinned?1:0);
     return (b.updatedAt||0) - (a.updatedAt||0);
   });
@@ -286,18 +300,17 @@ function renderChatList(filter=''){
     const item = document.createElement('div');
     item.className = 'flex items-center gap-3 p-2 rounded-md hover:bg-white/5 cursor-pointer transition';
     if(chat.id === activeChatId) item.classList.add('bg-white/5');
-    const iconHtml = `<div class="w-9 h-9 rounded-lg bg-white/6 flex items-center justify-center"><i data-lucide="message-circle" class="w-4 h-4 text-white"></i></div>`;
-    const html = `${iconHtml}
+    const icon = `<div class="w-9 h-9 rounded-lg bg-white/6 flex items-center justify-center"><i data-lucide="message-circle" class="w-4 h-4 text-white"></i></div>`;
+    item.innerHTML = `${icon}
       <div class="flex-1 min-w-0">
         <div class="text-sm font-medium truncate">${escapeHtml(chat.title||'New Chat')}</div>
         <div class="text-xs muted">${chat.updatedAt?new Date(chat.updatedAt).toLocaleString():'No messages'}</div>
       </div>
       <div class="flex items-center gap-2">
-        <button data-action="pin" data-id="${chat.id}" class="p-1 rounded hover:bg-white/5"><i data-lucide="${chat.pinned?'star':'star'}" class="w-4 h-4 text-white"></i></button>
+        <button data-action="pin" data-id="${chat.id}" class="p-1 rounded hover:bg-white/5"><i data-lucide="${chat.pinned ? 'star' : 'star'}" class="w-4 h-4 text-white"></i></button>
         <button data-action="del" data-id="${chat.id}" class="p-1 rounded hover:bg-red-600/20"><i data-lucide="trash-2" class="w-4 h-4 text-white"></i></button>
       </div>`;
-    item.innerHTML = html;
-    item.addEventListener('click', (e)=>{
+    item.addEventListener('click', e=>{
       if(e.target.closest('button')) return;
       openChat(chat.id);
     });
@@ -306,29 +319,32 @@ function renderChatList(filter=''){
   lucide.createIcons();
 }
 
-/* render active chat messages */
+/* UI render: active chat messages */
 function renderActiveChat(){
-  const chat = chats.find(c=>c.id===activeChatId);
-  if(!chat){ chatArea.innerHTML=''; chatTitle.textContent='New Chat'; chatMeta.textContent=''; return; }
+  const chat = chats.find(c=>c.id === activeChatId);
+  if(!chat){ chatArea.innerHTML = ''; chatTitle.textContent = 'New Chat'; chatMeta.textContent = ''; return; }
   chatTitle.textContent = chat.title || 'New Chat';
   chatMeta.textContent = `Updated: ${chat.updatedAt?new Date(chat.updatedAt).toLocaleString():'n/a'}`;
   chatArea.innerHTML = '';
-  chat.messages.forEach(m => {
+  chat.messages.forEach(m=>{
     appendMessageToDOM(m);
   });
   chatArea.scrollTop = chatArea.scrollHeight;
   lucide.createIcons();
 }
 
+/* Append message to DOM; if isTyping==true, append typing placeholder */
 function appendMessageToDOM(message, isTyping=false){
   const wrapper = document.createElement('div');
-  wrapper.className = `w-full flex ${message.role==='user'?'justify-end':''} fade-in`;
+  wrapper.className = `w-full flex ${message.role==='user' ? 'justify-end':''} fade-in`;
   const bubble = document.createElement('div');
-  bubble.className = `${message.role==='user'?'bg-gradient-to-r from-blue-500 to-purple-500 text-black':'bg-gray-900/70 text-white border border-white/6'} max-w-[75%] p-3 rounded-2xl text-sm`;
+  bubble.className = `${message.role==='user' ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-black' : 'bg-gray-900/70 text-white border border-white/6'} max-w-[75%] p-3 rounded-2xl text-sm`;
   if(isTyping){
     bubble.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div>`;
   } else {
-    bubble.innerHTML = `<div class="whitespace-pre-wrap">${escapeHtml(safeTextFromMessage(message))}</div>`;
+    const text = safeTextFromMsg(message);
+    // render markdown + math
+    bubble.innerHTML = renderMessageHTML(text);
   }
   wrapper.appendChild(bubble);
   chatArea.appendChild(wrapper);
@@ -336,19 +352,11 @@ function appendMessageToDOM(message, isTyping=false){
   return bubble;
 }
 
-function escapeHtml(s){ return (s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
-
-/* Chat operations */
+/* Create or open chat */
 function createChat(initialText){
-  const id = UID();
-  const chat = { id, title: initialText ? (initialText.slice(0,40)+(initialText.length>40?'…':'')) : 'New Chat', messages: [], pinned:false, updatedAt: now() };
-  // add system prompt
-  chat.messages.push({ role:'system', content:[{type:'text', text: systemPromptInput.value || DEFAULT_SYSTEM_PROMPT}], ts: now() });
-  if(initialText){
-    chat.messages.push({ role:'user', content:[{type:'text', text: initialText}], ts: now() });
-  }
+  const chat = createChatObject(initialText);
   chats.unshift(chat);
-  activeChatId = id;
+  activeChatId = chat.id;
   saveChats();
   renderChatList(searchEl.value);
   renderActiveChat();
@@ -360,7 +368,8 @@ function openChat(id){
   renderActiveChat();
 }
 function deleteChat(id){
-  chats = chats.filter(c=>c.id!==id);
+  if(!confirm('Delete this chat?')) return;
+  chats = chats.filter(c=>c.id !== id);
   if(activeChatId === id) activeChatId = chats[0]?.id || null;
   saveChats();
   renderChatList(searchEl.value);
@@ -370,169 +379,187 @@ function togglePin(id){
   const c = chats.find(x=>x.id===id); if(!c) return; c.pinned = !c.pinned; saveChats(); renderChatList(searchEl.value);
 }
 
-/* API: robust streaming + fallback */
+/* Build messages array for Puter from chat.messages (with system first) */
+function buildMessagesForAPI(chat){
+  // Ensure system message is first. Puter expects array of message objects with role + content (array of type)
+  const msgs = chat.messages.map(m => ({ role: m.role, content: m.content }));
+  // If first message is not system, prepend system prompt
+  if(!msgs.length || msgs[0].role !== 'system'){
+    msgs.unshift({ role: 'system', content: [{ type: 'text', text: systemPromptInput.value || DEFAULT_SYSTEM_PROMPT }] });
+  }
+  return msgs;
+}
+
+/* Wait for puter to be ready */
 async function waitForPuter(){
   if(window.puter?.ai) return true;
   for(let i=0;i<50;i++){
     if(window.puter?.ai) return true;
     await new Promise(r=>setTimeout(r,200));
   }
-  return !!(window.puter?.ai);
+  return !!window.puter?.ai;
 }
 
-async function sendToAIStreaming(chat){
-  // Build messages with system prompt first (ensure it's the first message)
-  const messagesForAPI = chat.messages.map(m => ({ role: m.role, content: m.content }));
-  // options
+/* Send to Puter with streaming fallback; returns assistant text or throws */
+async function sendToPuter(chat){
+  const msgs = buildMessagesForAPI(chat);
   const options = { model: modelSelect.value || 'gpt-5-nano', stream: true };
   const localKey = apiKeyInput.value?.trim();
   if(localKey) options.apiKey = localKey;
 
-  // try streaming
+  // Pre-convert user math in last user message before sending
+  // Convert any user message content: apply convertMathNotationForAI to each text content before sending
+  const msgsForSend = msgs.map(m => {
+    const newContent = m.content.map(c => {
+      if(c.type === 'text' && m.role === 'user'){
+        return { type: 'text', text: convertMathNotationForAI(c.text) };
+      }
+      return c;
+    });
+    return { role: m.role, content: newContent };
+  });
+
+  // Try streaming first
   try {
-    const resp = await puter.ai.chat(messagesForAPI, options);
-    // check if resp is async iterable
-    if (resp && typeof resp[Symbol.asyncIterator] === 'function') {
+    const resp = await puter.ai.chat(msgsForSend, options);
+    // streaming: async iterator
+    if(resp && typeof resp[Symbol.asyncIterator] === 'function'){
       let out = '';
-      for await (const part of resp) {
+      for await (const part of resp){
         if(part?.text){
           out += part.text;
-          // update typing bubble in DOM (replace last bubble)
+          // update last bubble
           const last = chatArea.lastElementChild;
-          if(last) last.querySelector('div').innerHTML = `<div class="whitespace-pre-wrap">${escapeHtml(out)}</div>`;
+          if(last) last.querySelector('div').innerHTML = renderMessageHTML(out);
           chatArea.scrollTop = chatArea.scrollHeight;
         }
       }
       return out;
     }
-    // fallback if resp isn't async iterable but has output
+    // fallback non-iterator returns object
     if(resp?.output_text) return resp.output_text;
     if(resp?.output?.[0]?.content?.[0]?.text) return resp.output[0].content[0].text;
-    // if nothing found, stringify resp
     return typeof resp === 'string' ? resp : JSON.stringify(resp);
   } catch(err){
-    // If streaming failed, attempt single call without stream flag
-    console.warn('Streaming error, falling back to single-call:', err);
+    // streaming failed — attempt one-shot without stream flag
+    console.warn('Streaming failed, trying one-shot:', err);
     try {
-      const oneShot = await puter.ai.chat(messagesForAPI, { model: options.model, stream: false, apiKey: options.apiKey });
-      if(oneShot?.output_text) return oneShot.output_text;
-      if(oneShot?.output?.[0]?.content?.[0]?.text) return oneShot.output[0].content[0].text;
-      return typeof oneShot === 'string' ? oneShot : JSON.stringify(oneShot);
+      const one = await puter.ai.chat(msgsForSend, { model: options.model, stream: false, apiKey: options.apiKey });
+      if(one?.output_text) return one.output_text;
+      if(one?.output?.[0]?.content?.[0]?.text) return one.output[0].content[0].text;
+      return typeof one === 'string' ? one : JSON.stringify(one);
     } catch(e2){
-      // bubble up user-friendly error
-      throw e2?.error?.message || e2?.message || JSON.stringify(e2);
+      // try to extract message
+      const message = e2?.error?.message || e2?.message || JSON.stringify(e2);
+      throw message;
     }
   }
 }
 
-/* Send prompt from composer to AI with streaming & error handling */
+/* Send prompt from composer */
 async function sendPrompt(){
-  const chat = chats.find(c=>c.id===activeChatId);
-  if(!chat) { createChat(); return; }
-  const text = composer.value.trim();
-  if(!text) return;
+  const chat = chats.find(c=>c.id===activeChatId) || createChat();
+  const textRaw = composer.value.trim();
+  if(!textRaw) return;
   composer.value = '';
-  // push user message
-  chat.messages.push({ role:'user', content:[{type:'text', text}], ts: now() });
+
+  // push user message to chat.messages
+  const userMsg = { role:'user', content:[{ type:'text', text:textRaw }], ts: now() };
+  chat.messages.push(userMsg);
   chat.updatedAt = now();
   saveChats();
-  renderChatList(searchEl.value);
-  appendMessageToDOM({ role:'user', content:[{type:'text', text}] });
 
-  // add typing bubble
+  // append user bubble
+  appendMessageToDOM(userMsg);
+  // append typing bubble for assistant
   appendMessageToDOM({ role:'assistant', content:[] }, true);
-  statusTxt.textContent = 'Thinking...';
+  statusText.textContent = 'Thinking...';
 
   try {
     await waitForPuter();
-    const assistantText = await sendToAIStreaming(chat);
-    // replace the last typing bubble content has already been set in streaming loop
-    // ensure final assistant message is in chat.messages
-    chat.messages.push({ role:'assistant', content:[{type:'text', text: assistantText}], ts: now() });
+    // send and stream
+    const assistantText = await sendToPuter(chat);
+    // update last bubble already updated in streaming; ensure final state
+    chat.messages.push({ role:'assistant', content:[{ type:'text', text: assistantText }], ts: now() });
     chat.updatedAt = now();
     saveChats();
     renderChatList(searchEl.value);
-    statusTxt.textContent = 'Ready';
-  } catch (err){
-    console.error('AI Error:', err);
-    // show error in last bubble
+    statusText.textContent = 'Ready';
+  } catch(err){
+    console.error('AI error', err);
     const last = chatArea.lastElementChild;
-    if(last) last.querySelector('div').textContent = '⚠️ Error: ' + (err?.toString?.() || JSON.stringify(err));
-    statusTxt.textContent = 'Error';
+    if(last) last.querySelector('div').textContent = '⚠️ Error: ' + (err || 'Unknown');
+    statusText.textContent = 'Error';
   }
 }
 
-/* UI event wiring */
+/* UI actions */
 sendBtn.addEventListener('click', sendPrompt);
-composer.addEventListener('keydown', e => {
-  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendPrompt(); }
-});
+composer.addEventListener('keydown', e => { if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendPrompt(); }});
 newChatBtn.addEventListener('click', ()=> createChat());
-newChatLocalBtn.addEventListener('click', ()=> createChat());
+newChatBottom.addEventListener('click', ()=> createChat());
 searchEl.addEventListener('input', ()=> renderChatList(searchEl.value));
 copyBtn.addEventListener('click', ()=>{
   const chat = chats.find(c=>c.id===activeChatId); if(!chat) return;
-  const text = chat.messages.map(m => `${m.role.toUpperCase()}: ${safeTextFromMessage(m)}`).join('\n\n');
-  navigator.clipboard.writeText(text).then(()=> statusTxt.textContent='Copied');
+  const plain = chat.messages.map(m=>`${m.role.toUpperCase()}: ${safeTextFromMsg(m)}`).join('\n\n');
+  navigator.clipboard.writeText(plain).then(()=> statusText.textContent='Copied');
 });
 downloadBtn.addEventListener('click', ()=>{
   const chat = chats.find(c=>c.id===activeChatId); if(!chat) return;
-  const blob = new Blob([JSON.stringify(chat, null, 2)], {type:'application/json'});
+  const blob = new Blob([JSON.stringify(chat, null, 2)], { type:'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href = url; a.download = `${(chat.title||'chat').replace(/\s+/g,'_')}.json`; a.click(); URL.revokeObjectURL(url);
 });
 exportAllBtn.addEventListener('click', ()=>{
-  const blob = new Blob([JSON.stringify(chats, null, 2)], {type:'application/json'});
-  const url = URL.createObjectURL(blob); const a = document.createElement('a');
-  a.href = url; a.download = 'smartai_all_chats.json'; a.click(); URL.revokeObjectURL(url);
+  const blob = new Blob([JSON.stringify(chats, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='smartai_all_chats.json'; a.click(); URL.revokeObjectURL(url);
 });
-clearAllBtn.addEventListener('click', ()=>{
-  if(!confirm('Delete ALL chats from local storage?')) return;
-  chats = []; activeChatId = null; saveChats(); renderChatList(); renderActiveChat();
-  statusTxt.textContent = 'Cleared';
-});
+clearAllBtn.addEventListener('click', ()=> { if(!confirm('Delete ALL chats?')) return; chats=[]; activeChatId=null; saveChats(); renderChatList(); renderActiveChat(); });
 
 /* Settings modal */
-settingsBtn.addEventListener('click', ()=> { settingsModal.classList.remove('hidden'); });
-closeSettings.addEventListener('click', ()=> { settingsModal.classList.add('hidden'); });
-cancelSettings.addEventListener('click', ()=> { settingsModal.classList.add('hidden'); });
-saveSettings.addEventListener('click', ()=> {
-  saveSettingsToStorage();
-  settingsModal.classList.add('hidden');
-  setTimeout(()=> { statusTxt.textContent = 'Settings saved'; }, 200);
-});
+settingsBtn.addEventListener('click', ()=> settingsModal.classList.remove('hidden'));
+closeSettings.addEventListener('click', ()=> settingsModal.classList.add('hidden'));
+cancelSettings.addEventListener('click', ()=> settingsModal.classList.add('hidden'));
+saveSettings.addEventListener('click', ()=> { saveSettings(); settingsModal.classList.add('hidden'); statusText.textContent='Settings saved'; });
 
-/* delegated chat list pin/delete handling */
-chatListEl.addEventListener('click', (e)=>{
+/* Chat list delegated actions (pin/delete) */
+chatListEl.addEventListener('click', e => {
   const btn = e.target.closest('button[data-action]');
   if(!btn) return;
   const id = btn.dataset.id;
-  const action = btn.dataset.action;
-  if(action === 'del'){ if(confirm('Delete this chat?')) deleteChat(id); }
-  if(action === 'pin'){ togglePin(id); }
+  const act = btn.dataset.action;
+  if(act === 'del'){ deleteChat(id); }
+  if(act === 'pin'){ togglePin(id); }
 });
 
-/* keyboard shortcuts */
-document.addEventListener('keydown', (e)=>{
+/* delegated open chat on whole item click handled in renderChatList items */
+
+/* Keyboard shortcuts */
+document.addEventListener('keydown', e=>{
   if((e.ctrlKey||e.metaKey) && e.key.toLowerCase() === 'k'){ e.preventDefault(); searchEl.focus(); searchEl.select(); }
   if((e.ctrlKey||e.metaKey) && e.key.toLowerCase() === 'n'){ e.preventDefault(); createChat(); }
 });
 
-/* helper: initial boot and UI population */
+/* Chat list click handler above used for pin/delete; ensure icons render */
+chatListEl.addEventListener('click', e=>{ lucide.createIcons(); });
+
+/* Delegated pin/delete on render (buttons have data-action/data-id) handled earlier */
+
+/* Utilities for initial load */
 function init(){
-  // populate settings fields
-  loadSettingsFromStorage();
-  // if no chats, create one
-  if(!chats || !chats.length) createChat();
+  loadSettings();
+  loadChats();
+  if(!chats.length) createChat();
   else { activeChatId = chats[0].id; renderChatList(); renderActiveChat(); }
-  // reflect persisted settings
   lucide.createIcons();
-  statusTxt.textContent = 'Ready';
+  statusText.textContent = 'Ready';
+  // ensure systemPrompt input shows current setting
+  systemPromptInput.value = systemPromptInput.value || DEFAULT_SYSTEM_PROMPT;
 }
 init();
 
-/* Expose debug */
-window.SmartAI = { chats, saveChats, loadChats, createChat };
+/* Save automatically when before unload */
+window.addEventListener('beforeunload', ()=> saveChats() );
 
 </script>
 </body>

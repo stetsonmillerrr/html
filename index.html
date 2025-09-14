@@ -22,6 +22,7 @@ body {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  color:white;
 }
 .glass {
   background: var(--glass-bg);
@@ -46,6 +47,7 @@ body {
 /* Toggle switch */
 .toggle-bg { background: linear-gradient(90deg,#4f46e5,#ec4899); }
 .toggle-dot { transition: transform 0.3s ease-in-out; }
+.translate-x-6 { transform: translateX(1.5rem); }
 </style>
 </head>
 <body class="h-screen flex text-white">
@@ -248,9 +250,10 @@ function loadSettingsFromStorage(){
   modelSelect.value = s.model || 'gpt-5-nano';
   themeSelect.value = s.theme || 'dark';
   iframeToggle.checked = s.iframeOverlay || false;
-  if(iframeToggle.checked) showIframeOverlay();
   updateToggleUI();
 }
+
+/* Toggle switch UI */
 function updateToggleUI(){
   if(iframeToggle.checked){
     dot.classList.add('translate-x-6');
@@ -264,6 +267,7 @@ function showIframeOverlay(){
   const iframeWindow = window.open('about:blank','iframeOverlay');
   if(!iframeWindow) return;
   iframeWindow.document.body.style.margin='0';
+  iframeWindow.document.body.style.overflow='hidden';
   const iframe = iframeWindow.document.createElement('iframe');
   iframe.src = window.location.href;
   iframe.style.border='0';
@@ -274,41 +278,129 @@ function showIframeOverlay(){
 
 /* Theme toggle */
 function applyTheme(){
-  if(themeSelect.value==='dark'){ document.body.classList.add('bg-gradient-to-br'); }
-  else{ document.body.classList.remove('bg-gradient-to-br'); document.body.style.background='#f0f0f0'; document.body.style.color='#000'; }
+  if(themeSelect.value==='dark'){ 
+    document.body.style.background='linear-gradient(135deg,#071029 0%, #1d1140 40%, #082032 100%)';
+    document.body.style.color='white';
+  } else { 
+    document.body.style.background='#f0f0f0'; 
+    document.body.style.color='#000'; 
+  }
 }
 
-/* Initialize */
-loadSettingsFromStorage();
-applyTheme();
+/* Chat persistence */
+function saveChats(){ if(!persistToggle.checked) return; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(chats)); } catch(e){ console.warn(e); } }
+function loadChats(){ const raw=localStorage.getItem(STORAGE_KEY); chats=raw?JSON.parse(raw):[]; }
 
-iframeToggle.addEventListener('change', ()=>{
-  updateToggleUI();
-  if(iframeToggle.checked) showIframeOverlay();
-});
+/* Helpers */
+function now(){ return Date.now(); }
+function safeTextFromMessage(m){ return m.content.find(c=>c.type==='text')?.text || ''; }
+function pushMessageToChat(chatId, role, text){ 
+  const chat = chats.find(c=>c.id===chatId); if(!chat) return;
+  const msg = { role, content: [{ type:'text', text }], ts: now() };
+  chat.messages.push(msg); chat.updatedAt = now(); saveChats(); renderChatList(searchInput.value); renderActiveChat();
+}
+function escapeHtml(s){ return (s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
 
-themeSelect.addEventListener('change', applyTheme);
+/* Rendering */
+function renderChatList(filter=''){
+  chatListEl.innerHTML=''; 
+  [...chats].sort((a,b)=> (b.updatedAt||0)-(a.updatedAt||0)).forEach(chat=>{
+    if(filter && !(chat.title||'').toLowerCase().includes(filter.toLowerCase())) return;
+    const item = document.createElement('div');
+    item.className='flex items-center gap-3 p-2 rounded-md hover:bg-white/5 cursor-pointer transition';
+    if(chat.id===activeChatId) item.classList.add('bg-white/5');
+    item.innerHTML = `
+      <div class="w-9 h-9 rounded-lg bg-white/6 flex items-center justify-center"><i data-lucide="message-circle" class="w-4 h-4 text-white"></i></div>
+      <div class="flex-1 min-w-0">
+        <div class="text-sm font-medium truncate">${escapeHtml(chat.title||'New Chat')}</div>
+        <div class="text-xs muted">${chat.updatedAt ? new Date(chat.updatedAt).toLocaleString() : 'No messages'}</div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button data-action="pin" data-id="${chat.id}" class="p-1 rounded hover:bg-white/5"><i data-lucide="star" class="w-4 h-4 text-white"></i></button>
+        <button data-action="del" data-id="${chat.id}" class="p-1 rounded hover:bg-red-600/20"><i data-lucide="trash-2" class="w-4 h-4 text-white"></i></button>
+      </div>
+    `;
+    item.addEventListener('click', e => { if(!e.target.closest('button')) openChat(chat.id); });
+    chatListEl.appendChild(item);
+  });
+  lucide.createIcons();
+}
 
-chatListEl.addEventListener('click', e=>{
-  const btn=e.target.closest('button[data-action]'); if(!btn) return;
-  const id=btn.dataset.id, action=btn.dataset.action;
-  if(action==='del'){ if(confirm('Delete this chat?')) deleteChat(id); }
-  if(action==='pin'){ togglePin(id); }
+function renderActiveChat(){
+  const chat = chats.find(c=>c.id===activeChatId);
+  if(!chat){ chatArea.innerHTML=''; chatTitle.textContent='New Chat'; chatMeta.textContent=''; return; }
+  chatTitle.textContent = chat.title || 'New Chat';
+  chatMeta.textContent = `Updated: ${chat.updatedAt?new Date(chat.updatedAt).toLocaleString():'n/a'}`;
+  chatArea.innerHTML='';
+  chat.messages.forEach(msg=>{
+    const div = document.createElement('div');
+    div.className = 'p-3 rounded-md bg-white/5';
+    div.innerHTML = `<strong>${msg.role}:</strong> ${escapeHtml(safeTextFromMessage(msg))}`;
+    chatArea.appendChild(div);
+  });
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+/* Chat actions */
+function createChat(){
+  const chat={id:UID(), title:'New Chat', messages:[], createdAt:now(), updatedAt:now(), pinned:false};
+  chats.unshift(chat);
+  activeChatId = chat.id;
+  saveChats();
+  renderChatList(); renderActiveChat();
+}
+
+function openChat(id){ activeChatId=id; renderChatList(); renderActiveChat(); }
+
+function deleteChat(id){ chats = chats.filter(c=>c.id!==id); if(activeChatId===id) activeChatId = chats[0]?.id || null; saveChats(); renderChatList(); renderActiveChat(); }
+
+function togglePin(id){ const chat = chats.find(c=>c.id===id); if(!chat) return; chat.pinned=!chat.pinned; saveChats(); renderChatList(); }
+
+/* Send message */
+sendBtn.addEventListener('click', ()=>{
+  const text = composer.value.trim(); if(!text) return;
+  pushMessageToChat(activeChatId,text?'user':'', text);
+  composer.value='';
 });
 
 /* Keyboard shortcuts */
+composer.addEventListener('keydown', e=>{
+  if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendBtn.click(); }
+});
+
 document.addEventListener('keydown', e=>{
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); searchInput.focus(); searchInput.select(); }
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='n'){ e.preventDefault(); createChat(); }
 });
 
+/* Search */
+searchInput.addEventListener('input', ()=>renderChatList(searchInput.value));
+
+/* Export/Clear */
+exportAllBtn.addEventListener('click', ()=>{ navigator.clipboard.writeText(JSON.stringify(chats,null,2)); alert('Copied to clipboard'); });
+clearAllBtn.addEventListener('click', ()=>{ if(confirm('Clear all chats?')){ chats=[]; activeChatId=null; saveChats(); renderChatList(); renderActiveChat(); } });
+
+/* Settings modal */
+settingsBtn.addEventListener('click', ()=>settingsModal.classList.remove('hidden'));
+closeSettings.addEventListener('click', ()=>settingsModal.classList.add('hidden'));
+cancelSettings.addEventListener('click', ()=>settingsModal.classList.add('hidden'));
+saveSettings.addEventListener('click', ()=>{
+  saveSettingsToStorage();
+  applyTheme();
+  settingsModal.classList.add('hidden');
+  if(iframeToggle.checked) showIframeOverlay();
+});
+
+/* Toggle */
+iframeToggle.addEventListener('change', updateToggleUI);
+
 /* Initialize */
-function init(){ 
-  loadSettingsFromStorage(); 
-  if(iframeOverlayToggle.checked){ showIframeOverlay(); return; }
+function init(){
+  loadChats();
+  loadSettingsFromStorage();
+  applyTheme();
+  if(iframeToggle.checked) showIframeOverlay();
   if(!chats.length) createChat(); else { activeChatId=chats[0].id; renderChatList(); renderActiveChat(); }
-  lucide.createIcons(); 
-  statusTxt.textContent='Ready';
 }
 init();
 </script>

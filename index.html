@@ -1,273 +1,539 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Smart AI Chat+</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://js.puter.com/v2/"></script>
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-  <style>
-    .typing-dots span {
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      margin-right: 4px;
-      background: white;
-      border-radius: 50%;
-      animation: bounce 1.4s infinite;
-    }
-    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
-    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes bounce {
-      0%, 80%, 100% { transform: scale(0.6); opacity: 0.6; }
-      40% { transform: scale(1); opacity: 1; }
-    }
-    .fade-in {
-      animation: fadeIn 0.4s ease forwards;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  </style>
-</head>
-<body class="bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] text-white h-screen flex font-sans">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Smart AI Chat+ (Glassy, Persistent, Smart)</title>
 
-  <!-- Sidebar -->
-  <aside class="w-72 bg-black/30 backdrop-blur-xl border-r border-white/10 flex flex-col shadow-xl transition-all duration-300">
-    <div class="flex items-center justify-between p-4 border-b border-white/10">
-      <h2 class="font-bold text-lg bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Chats</h2>
-      <button id="newChatBtn" class="p-2 rounded-lg hover:bg-white/10 transition">
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Puter JS -->
+<script src="https://js.puter.com/v2/"></script>
+<!-- Lucide icons -->
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+<style>
+  /* Global polish */
+  :root{
+    --glass-bg: rgba(255,255,255,0.04);
+    --muted: rgba(255,255,255,0.6);
+  }
+  body {
+    background: linear-gradient(135deg,#071029 0%, #1d1140 40%, #082032 100%);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+  }
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px) saturate(120%);
+    -webkit-backdrop-filter: blur(10px) saturate(120%);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .typing-dots span {
+    display:inline-block;
+    width:7px;height:7px;border-radius:999px;margin-right:5px;background:white;opacity:.85;
+    animation: bounce 1.2s infinite;
+  }
+  .typing-dots span:nth-child(2){ animation-delay:.14s }
+  .typing-dots span:nth-child(3){ animation-delay:.28s }
+  @keyframes bounce { 0%,80%,100%{transform:scale(.6);opacity:.6}40%{transform:scale(1);opacity:1} }
+
+  /* simple fade-in */
+  .fade-in { animation: fadeIn .28s cubic-bezier(.2,.9,.3,1) both; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px) } to { opacity:1; transform: translateY(0) } }
+
+  /* scroll bar */
+  .chat-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.12) transparent; }
+  .chat-scroll::-webkit-scrollbar { width: 8px; height: 8px }
+  .chat-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 10px }
+
+  /* small helpers */
+  .muted { color: var(--muted); }
+</style>
+</head>
+<body class="h-screen flex text-white">
+
+<!-- Sidebar -->
+<aside class="w-80 p-4 flex-shrink-0 glass border-r border-white/6 flex flex-col">
+  <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow">
+        <i data-lucide="zap" class="w-5 h-5 text-white"></i>
+      </div>
+      <div>
+        <div class="font-semibold">Smart AI Chat+</div>
+        <div class="text-xs muted">Glassy. Persistent. Smarter.</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="newChatBtn" class="p-2 rounded-md hover:bg-white/5 transition" title="New Chat">
         <i data-lucide="plus" class="w-5 h-5 text-white"></i>
       </button>
-    </div>
-    <nav id="chatHistory" class="flex-1 overflow-y-auto p-2 space-y-1 text-sm">
-      <!-- Chat list -->
-    </nav>
-    <div class="p-4 border-t border-white/10 flex items-center justify-between text-xs text-gray-400">
-      <span>⚡ Smart AI Chat+</span>
-      <button class="p-1 hover:bg-white/10 rounded">
-        <i data-lucide="settings" class="w-4 h-4 text-white"></i>
+      <button id="settingsBtn" class="p-2 rounded-md hover:bg-white/5 transition" title="Settings">
+        <i data-lucide="settings" class="w-5 h-5 text-white"></i>
       </button>
-    </div>
-  </aside>
-
-  <!-- Main -->
-  <div class="flex-1 flex flex-col">
-    <header class="px-6 py-4 bg-black/30 backdrop-blur-xl border-b border-white/10 sticky top-0 z-10 flex items-center justify-between">
-      <h1 class="font-bold text-xl bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">🤖 Smart AI Chat+</h1>
-      <div class="flex gap-3">
-        <button class="p-2 rounded-lg hover:bg-white/10 transition">
-          <i data-lucide="moon" class="w-5 h-5 text-white"></i>
-        </button>
-        <button class="p-2 rounded-lg hover:bg-white/10 transition">
-          <i data-lucide="info" class="w-5 h-5 text-white"></i>
-        </button>
-      </div>
-    </header>
-
-    <!-- Chat -->
-    <div id="chat" class="flex-1 overflow-y-auto p-6 space-y-4"></div>
-
-    <!-- Input -->
-    <div class="flex flex-col gap-3 p-4 bg-black/30 border-t border-white/10 backdrop-blur-xl">
-      <div id="dropZone" 
-        class="px-4 py-3 rounded-xl border-2 border-dashed border-gray-600 text-sm text-gray-400 text-center hover:border-purple-400 hover:text-purple-300 transition cursor-pointer">
-        Drag & Drop Images Here (or click to upload)
-      </div>
-      <div class="flex items-center gap-3">
-        <input id="userInput" type="text" placeholder="Type your message..." 
-          class="flex-1 px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700 placeholder-gray-400 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
-        <button id="sendBtn" 
-          class="p-3 rounded-xl font-medium bg-gradient-to-r from-purple-500 to-blue-500 hover:opacity-90 transition flex items-center gap-2">
-          <i data-lucide="send" class="w-5 h-5 text-white"></i>
-        </button>
-      </div>
     </div>
   </div>
 
-  <script>
-    lucide.createIcons(); // init icons
+  <div class="mb-3">
+    <input id="searchInput" placeholder="Search chats (Ctrl/Cmd+K)"
+      class="w-full px-3 py-2 rounded-lg bg-white/5 placeholder:text-white/60 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+  </div>
 
-    const chatBox = document.getElementById("chat");
-    const userInput = document.getElementById("userInput");
-    const sendBtn = document.getElementById("sendBtn");
-    const dropZone = document.getElementById("dropZone");
-    const newChatBtn = document.getElementById("newChatBtn");
-    const chatHistoryEl = document.getElementById("chatHistory");
-    const MODEL = "gpt-5-nano";
+  <div id="chatList" class="flex-1 overflow-y-auto space-y-2 p-1"></div>
 
-    const SYSTEM_PROMPT = `
-You are Smart AI Chat+. 
-Be a conversational, smart tutor with memory. 
-Use modern formatting, explain math step-by-step, and analyze images if provided.
-`;
+  <div class="mt-4 pt-3 border-t border-white/6 text-xs muted">
+    <div class="flex items-center justify-between">
+      <div>Model</div>
+      <select id="modelSelect" class="bg-transparent text-white text-xs">
+        <option value="gpt-5-nano">gpt-5-nano</option>
+        <option value="gpt-4o-mini">gpt-4o-mini</option>
+      </select>
+    </div>
+    <div class="mt-3 flex gap-2">
+      <button id="exportAllBtn" class="flex-1 px-3 py-2 rounded-md bg-white/6 hover:bg-white/8 text-sm">Export All</button>
+      <button id="clearAllBtn" class="px-3 py-2 rounded-md bg-red-600/20 hover:bg-red-600/30 text-sm">Clear</button>
+    </div>
+    <div class="mt-3 text-xs muted">Tip: Ctrl/Cmd+N = New Chat • Ctrl/Cmd+K = Focus search</div>
+  </div>
+</aside>
 
-    let chats = [];
-    let activeChatId = null;
-    let pendingImages = [];
+<!-- Main area -->
+<main class="flex-1 flex flex-col">
 
-    function createNewChat() {
-      const id = Date.now().toString();
-      const chat = {
-        id,
-        title: "New Chat",
-        messages: [
-          { role: "system", content: [{ type: "text", text: SYSTEM_PROMPT }] }
-        ]
-      };
-      chats.push(chat);
-      activeChatId = id;
-      renderChatHistory();
-      renderChat(chat);
-    }
+  <!-- Header -->
+  <header class="px-6 py-3 border-b border-white/6 glass flex items-center justify-between">
+    <div class="flex items-center gap-4">
+      <button id="sidebarToggle" class="p-2 rounded-md hover:bg-white/5 hidden lg:inline-flex">
+        <i data-lucide="menu" class="w-5 h-5 text-white"></i>
+      </button>
+      <div>
+        <div id="chatTitle" class="text-lg font-semibold">New Chat</div>
+        <div id="chatMeta" class="text-xs muted">AI tutor · persistent memory</div>
+      </div>
+    </div>
 
-    function renderChatHistory() {
-      chatHistoryEl.innerHTML = "";
-      chats.forEach(chat => {
-        const btn = document.createElement("button");
-        btn.className = `w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 transition truncate ${
-          chat.id === activeChatId ? "bg-white/10" : ""
-        }`;
-        btn.innerHTML = `<i data-lucide="message-circle" class="w-4 h-4 text-white"></i><span>${chat.title}</span>`;
-        btn.onclick = () => {
-          activeChatId = chat.id;
-          renderChat(chat);
-          renderChatHistory();
-          lucide.createIcons();
-        };
-        chatHistoryEl.appendChild(btn);
-      });
-      lucide.createIcons();
-    }
+    <div class="flex items-center gap-2">
+      <div id="statusTxt" class="text-sm muted">Ready</div>
+      <button id="copyBtn" class="p-2 rounded-md hover:bg-white/5" title="Copy chat">
+        <i data-lucide="copy" class="w-5 h-5 text-white"></i>
+      </button>
+      <button id="downloadBtn" class="p-2 rounded-md hover:bg-white/5" title="Download chat">
+        <i data-lucide="download" class="w-5 h-5 text-white"></i>
+      </button>
+    </div>
+  </header>
 
-    function renderChat(chat) {
-      chatBox.innerHTML = "";
-      chat.messages.forEach(msg => {
-        const text = msg.content.find(c => c.type === "text")?.text || "";
-        const imgs = msg.content.filter(c => c.type === "image").map(c => c.src);
-        addMessage(msg.role, text, imgs);
-      });
-    }
+  <!-- Messages area -->
+  <section id="chatArea" class="flex-1 overflow-y-auto p-6 chat-scroll space-y-4">
+    <!-- messages go here -->
+  </section>
 
-    function addMessage(role, text, imgs = [], isTyping=false) {
-      const wrapper = document.createElement("div");
-      wrapper.className = `flex ${role==="user" ? "justify-end" : "justify-start"} w-full fade-in`;
+  <!-- Composer -->
+  <div class="p-4 border-t border-white/6 glass">
+    <div class="flex gap-2">
+      <textarea id="composer" rows="2" placeholder="Type your message... (Shift+Enter = newline)"
+        class="flex-1 p-3 rounded-xl bg-white/5 text-sm placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+      <div class="flex flex-col gap-2">
+        <button id="sendBtn" class="p-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 hover:scale-[1.03] transition" title="Send">
+          <i data-lucide="send" class="w-5 h-5 text-white"></i>
+        </button>
+        <button id="newChatBottom" class="px-3 py-1 rounded-md bg-white/6 hover:bg-white/8 text-xs">New</button>
+      </div>
+    </div>
+    <div class="mt-2 flex items-center justify-between text-xs muted">
+      <div id="usageInfo">Messages saved locally</div>
+      <div>
+        <label class="inline-flex items-center gap-2 text-xs muted">
+          <input id="persistToggle" type="checkbox" checked class="accent-indigo-400">
+          Persist
+        </label>
+      </div>
+    </div>
+  </div>
+</main>
 
-      const bubble = document.createElement("div");
-      bubble.className = `max-w-[75%] px-4 py-3 rounded-2xl whitespace-pre-wrap text-sm shadow-lg ${
-        role === "user" 
-        ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white font-medium" 
-        : "bg-gray-900/70 border border-gray-700 text-gray-200"
-      } transition`;
+<!-- Settings modal -->
+<div id="settingsModal" class="fixed inset-0 hidden items-center justify-center bg-black/60 z-50">
+  <div class="w-full max-w-3xl p-6 rounded-2xl glass">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-semibold">Settings</h3>
+      <button id="closeSettings" class="p-2 rounded-md hover:bg-white/5"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
 
-      if (isTyping) {
-        const dots = document.createElement("div");
-        dots.className = "typing-dots flex gap-1";
-        dots.innerHTML = "<span></span><span></span><span></span>";
-        bubble.appendChild(dots);
-      } else {
-        bubble.textContent = text;
-      }
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="text-sm muted mb-1 block">System Prompt (first prompt)</label>
+        <textarea id="systemPrompt" rows="8" class="w-full p-3 rounded-md bg-white/5 text-sm"></textarea>
+      </div>
+      <div>
+        <label class="text-sm muted mb-1 block">Puter API Key (optional)</label>
+        <input id="apiKeyInput" type="text" class="w-full p-3 rounded-md bg-white/5 text-sm" placeholder="Optional — stored locally" />
+        <div class="mt-4">
+          <label class="text-sm muted mb-1 block">Interface Theme</label>
+          <select id="themeSelect" class="w-full p-2 rounded-md bg-white/5 text-sm">
+            <option value="dark">Dark (recommended)</option>
+            <option value="light">Light</option>
+          </select>
+        </div>
+      </div>
+    </div>
 
-      if (imgs.length) {
-        imgs.forEach(src => {
-          const img = document.createElement("img");
-          img.src = src;
-          img.className = "mt-3 max-w-[200px] rounded-xl border border-gray-700";
-          bubble.appendChild(document.createElement("br"));
-          bubble.appendChild(img);
-        });
-      }
+    <div class="mt-4 flex justify-end gap-2">
+      <button id="saveSettings" class="px-4 py-2 rounded-md bg-indigo-600">Save</button>
+      <button id="cancelSettings" class="px-4 py-2 rounded-md bg-white/6">Cancel</button>
+    </div>
+  </div>
+</div>
 
-      wrapper.appendChild(bubble);
-      chatBox.appendChild(wrapper);
-      chatBox.scrollTop = chatBox.scrollHeight;
-      return bubble;
-    }
+<script>
+/* ========= Utility & State ========= */
+lucide.createIcons();
 
-    async function sendMessage() {
-      const text = userInput.value.trim();
-      if (!text && pendingImages.length === 0) return;
-      userInput.value = "";
+const UID = ()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const qs = s => document.querySelector(s);
+const qsa = s => Array.from(document.querySelectorAll(s));
 
-      const chat = chats.find(c => c.id === activeChatId);
-      if (!chat) return;
+/* Elements */
+const chatListEl = qs('#chatList');
+const chatArea = qs('#chatArea');
+const composer = qs('#composer');
+const sendBtn = qs('#sendBtn');
+const newChatBtn = qs('#newChatBtn');
+const newChatBottom = qs('#newChatBottom');
+const searchInput = qs('#searchInput');
+const chatTitle = qs('#chatTitle');
+const chatMeta = qs('#chatMeta');
+const statusTxt = qs('#statusTxt');
+const copyBtn = qs('#copyBtn');
+const downloadBtn = qs('#downloadBtn');
+const persistToggle = qs('#persistToggle');
+const modelSelect = qs('#modelSelect');
+const settingsBtn = qs('#settingsBtn');
+const settingsModal = qs('#settingsModal');
+const closeSettings = qs('#closeSettings');
+const saveSettings = qs('#saveSettings');
+const cancelSettings = qs('#cancelSettings');
+const systemPromptInput = qs('#systemPrompt');
+const apiKeyInput = qs('#apiKeyInput');
+const themeSelect = qs('#themeSelect');
+const exportAllBtn = qs('#exportAllBtn');
+const clearAllBtn = qs('#clearAllBtn');
+const searchEl = qs('#searchInput');
+const newChatLocalBtn = qs('#newChatBottom');
 
-      addMessage("user", text, pendingImages);
+/* App data */
+let chats = []; // [{id, title, messages: [{role, content:[{type,text}]}], pinned, updatedAt}]
+let activeChatId = null;
+const STORAGE_KEY = 'smartai_chats_v2';
+const SETTINGS_KEY = 'smartai_settings_v2';
+const DEFAULT_SYSTEM_PROMPT = `You are Smart AI Chat+. You are a clear, helpful tutor and assistant.
+- Explain step-by-step when teaching.
+- Use proper math notation (x^2 not x2).
+- If context exists, use it to give better answers.`;
 
-      const userEntry = { role: "user", content: [] };
-      if (text) userEntry.content.push({ type: "text", text });
-      pendingImages.forEach(src => userEntry.content.push({ type: "image", src }));
-      chat.messages.push(userEntry);
+function saveSettingsToStorage(){ 
+  const s = { systemPrompt: systemPromptInput.value, apiKey: apiKeyInput.value, model: modelSelect.value, theme: themeSelect.value };
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+}
+function loadSettingsFromStorage(){
+  const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+  systemPromptInput.value = s.systemPrompt || DEFAULT_SYSTEM_PROMPT;
+  apiKeyInput.value = s.apiKey || '';
+  modelSelect.value = s.model || modelSelect.value;
+  themeSelect.value = s.theme || 'dark';
+}
 
-      if (chat.title === "New Chat" && text) {
-        chat.title = text.slice(0, 30) + (text.length > 30 ? "…" : "");
-        renderChatHistory();
-      }
+/* Persistence for chats */
+function saveChats(){
+  if(!persistToggle.checked) return;
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(chats)); } catch(e){ console.warn('Save error', e); }
+}
+function loadChats(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(!raw) { chats=[]; return; }
+  try { chats = JSON.parse(raw); } catch(e){ chats = []; }
+}
 
-      pendingImages = [];
-      dropZone.textContent = "Drag & Drop Images Here (or click to upload)";
+/* Initialize settings & chats */
+loadSettingsFromStorage();
+loadChats();
 
-      const aiBubble = addMessage("assistant", "", [], true);
+/* Helpers */
+function now(){ return Date.now(); }
+function safeTextFromMessage(m){ return m.content.find(c=>c.type==='text')?.text || ''; }
+function pushMessageToChat(chatId, role, text){
+  const chat = chats.find(c=>c.id===chatId);
+  if(!chat) return;
+  const msg = { role, content: [{ type:'text', text }], ts: now() };
+  chat.messages.push(msg);
+  chat.updatedAt = now();
+  saveChats();
+  renderChatList(searchEl.value);
+  renderActiveChat();
+}
 
-      try {
-        let answer = "";
-        const resp = await puter.ai.chat(chat.messages, { model: MODEL, stream: true });
-        for await (const part of resp) {
-          if (part?.text) {
-            answer += part.text;
-            aiBubble.textContent = answer;
-          }
+/* UI Rendering */
+function renderChatList(filter=''){
+  chatListEl.innerHTML = '';
+  const sorted = [...chats].sort((a,b)=> {
+    if((b.pinned?1:0) - (a.pinned?1:0)) return (b.pinned?1:0)-(a.pinned?1:0);
+    return (b.updatedAt||0) - (a.updatedAt||0);
+  });
+  sorted.forEach(chat=>{
+    if(filter && !(chat.title||'').toLowerCase().includes(filter.toLowerCase())) return;
+    const item = document.createElement('div');
+    item.className = 'flex items-center gap-3 p-2 rounded-md hover:bg-white/5 cursor-pointer transition';
+    if(chat.id === activeChatId) item.classList.add('bg-white/5');
+    const iconHtml = `<div class="w-9 h-9 rounded-lg bg-white/6 flex items-center justify-center"><i data-lucide="message-circle" class="w-4 h-4 text-white"></i></div>`;
+    const html = `${iconHtml}
+      <div class="flex-1 min-w-0">
+        <div class="text-sm font-medium truncate">${escapeHtml(chat.title||'New Chat')}</div>
+        <div class="text-xs muted">${chat.updatedAt?new Date(chat.updatedAt).toLocaleString():'No messages'}</div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button data-action="pin" data-id="${chat.id}" class="p-1 rounded hover:bg-white/5"><i data-lucide="${chat.pinned?'star':'star'}" class="w-4 h-4 text-white"></i></button>
+        <button data-action="del" data-id="${chat.id}" class="p-1 rounded hover:bg-red-600/20"><i data-lucide="trash-2" class="w-4 h-4 text-white"></i></button>
+      </div>`;
+    item.innerHTML = html;
+    item.addEventListener('click', (e)=>{
+      if(e.target.closest('button')) return;
+      openChat(chat.id);
+    });
+    chatListEl.appendChild(item);
+  });
+  lucide.createIcons();
+}
+
+/* render active chat messages */
+function renderActiveChat(){
+  const chat = chats.find(c=>c.id===activeChatId);
+  if(!chat){ chatArea.innerHTML=''; chatTitle.textContent='New Chat'; chatMeta.textContent=''; return; }
+  chatTitle.textContent = chat.title || 'New Chat';
+  chatMeta.textContent = `Updated: ${chat.updatedAt?new Date(chat.updatedAt).toLocaleString():'n/a'}`;
+  chatArea.innerHTML = '';
+  chat.messages.forEach(m => {
+    appendMessageToDOM(m);
+  });
+  chatArea.scrollTop = chatArea.scrollHeight;
+  lucide.createIcons();
+}
+
+function appendMessageToDOM(message, isTyping=false){
+  const wrapper = document.createElement('div');
+  wrapper.className = `w-full flex ${message.role==='user'?'justify-end':''} fade-in`;
+  const bubble = document.createElement('div');
+  bubble.className = `${message.role==='user'?'bg-gradient-to-r from-blue-500 to-purple-500 text-black':'bg-gray-900/70 text-white border border-white/6'} max-w-[75%] p-3 rounded-2xl text-sm`;
+  if(isTyping){
+    bubble.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div>`;
+  } else {
+    bubble.innerHTML = `<div class="whitespace-pre-wrap">${escapeHtml(safeTextFromMessage(message))}</div>`;
+  }
+  wrapper.appendChild(bubble);
+  chatArea.appendChild(wrapper);
+  chatArea.scrollTop = chatArea.scrollHeight;
+  return bubble;
+}
+
+function escapeHtml(s){ return (s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+
+/* Chat operations */
+function createChat(initialText){
+  const id = UID();
+  const chat = { id, title: initialText ? (initialText.slice(0,40)+(initialText.length>40?'…':'')) : 'New Chat', messages: [], pinned:false, updatedAt: now() };
+  // add system prompt
+  chat.messages.push({ role:'system', content:[{type:'text', text: systemPromptInput.value || DEFAULT_SYSTEM_PROMPT}], ts: now() });
+  if(initialText){
+    chat.messages.push({ role:'user', content:[{type:'text', text: initialText}], ts: now() });
+  }
+  chats.unshift(chat);
+  activeChatId = id;
+  saveChats();
+  renderChatList(searchEl.value);
+  renderActiveChat();
+  return chat;
+}
+function openChat(id){
+  activeChatId = id;
+  renderChatList(searchEl.value);
+  renderActiveChat();
+}
+function deleteChat(id){
+  chats = chats.filter(c=>c.id!==id);
+  if(activeChatId === id) activeChatId = chats[0]?.id || null;
+  saveChats();
+  renderChatList(searchEl.value);
+  renderActiveChat();
+}
+function togglePin(id){
+  const c = chats.find(x=>x.id===id); if(!c) return; c.pinned = !c.pinned; saveChats(); renderChatList(searchEl.value);
+}
+
+/* API: robust streaming + fallback */
+async function waitForPuter(){
+  if(window.puter?.ai) return true;
+  for(let i=0;i<50;i++){
+    if(window.puter?.ai) return true;
+    await new Promise(r=>setTimeout(r,200));
+  }
+  return !!(window.puter?.ai);
+}
+
+async function sendToAIStreaming(chat){
+  // Build messages with system prompt first (ensure it's the first message)
+  const messagesForAPI = chat.messages.map(m => ({ role: m.role, content: m.content }));
+  // options
+  const options = { model: modelSelect.value || 'gpt-5-nano', stream: true };
+  const localKey = apiKeyInput.value?.trim();
+  if(localKey) options.apiKey = localKey;
+
+  // try streaming
+  try {
+    const resp = await puter.ai.chat(messagesForAPI, options);
+    // check if resp is async iterable
+    if (resp && typeof resp[Symbol.asyncIterator] === 'function') {
+      let out = '';
+      for await (const part of resp) {
+        if(part?.text){
+          out += part.text;
+          // update typing bubble in DOM (replace last bubble)
+          const last = chatArea.lastElementChild;
+          if(last) last.querySelector('div').innerHTML = `<div class="whitespace-pre-wrap">${escapeHtml(out)}</div>`;
+          chatArea.scrollTop = chatArea.scrollHeight;
         }
-        chat.messages.push({ role: "assistant", content: [{ type: "text", text: answer }] });
-      } catch (e) {
-        console.error("AI error:", e);
-        aiBubble.textContent = "⚠️ Error: " + e.message;
       }
+      return out;
     }
-
-    sendBtn.addEventListener("click", sendMessage);
-    userInput.addEventListener("keydown", e => {
-      if (e.key === "Enter") sendMessage();
-    });
-
-    newChatBtn.addEventListener("click", createNewChat);
-
-    // Drag & Drop
-    dropZone.addEventListener("dragover", e => {
-      e.preventDefault();
-      dropZone.classList.add("border-purple-400", "text-purple-300");
-    });
-    dropZone.addEventListener("dragleave", () => {
-      dropZone.classList.remove("border-purple-400", "text-purple-300");
-    });
-    dropZone.addEventListener("drop", e => {
-      e.preventDefault();
-      dropZone.classList.remove("border-purple-400", "text-purple-300");
-      handleFiles(e.dataTransfer.files);
-    });
-    dropZone.addEventListener("click", () => {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*";
-      input.multiple = true;
-      input.onchange = () => handleFiles(input.files);
-      input.click();
-    });
-
-    function handleFiles(files) {
-      [...files].forEach(file => {
-        const reader = new FileReader();
-        reader.onload = e => {
-          pendingImages.push(e.target.result);
-          dropZone.textContent = `${pendingImages.length} image(s) ready`;
-        };
-        reader.readAsDataURL(file);
-      });
+    // fallback if resp isn't async iterable but has output
+    if(resp?.output_text) return resp.output_text;
+    if(resp?.output?.[0]?.content?.[0]?.text) return resp.output[0].content[0].text;
+    // if nothing found, stringify resp
+    return typeof resp === 'string' ? resp : JSON.stringify(resp);
+  } catch(err){
+    // If streaming failed, attempt single call without stream flag
+    console.warn('Streaming error, falling back to single-call:', err);
+    try {
+      const oneShot = await puter.ai.chat(messagesForAPI, { model: options.model, stream: false, apiKey: options.apiKey });
+      if(oneShot?.output_text) return oneShot.output_text;
+      if(oneShot?.output?.[0]?.content?.[0]?.text) return oneShot.output[0].content[0].text;
+      return typeof oneShot === 'string' ? oneShot : JSON.stringify(oneShot);
+    } catch(e2){
+      // bubble up user-friendly error
+      throw e2?.error?.message || e2?.message || JSON.stringify(e2);
     }
+  }
+}
 
-    createNewChat();
-  </script>
+/* Send prompt from composer to AI with streaming & error handling */
+async function sendPrompt(){
+  const chat = chats.find(c=>c.id===activeChatId);
+  if(!chat) { createChat(); return; }
+  const text = composer.value.trim();
+  if(!text) return;
+  composer.value = '';
+  // push user message
+  chat.messages.push({ role:'user', content:[{type:'text', text}], ts: now() });
+  chat.updatedAt = now();
+  saveChats();
+  renderChatList(searchEl.value);
+  appendMessageToDOM({ role:'user', content:[{type:'text', text}] });
+
+  // add typing bubble
+  appendMessageToDOM({ role:'assistant', content:[] }, true);
+  statusTxt.textContent = 'Thinking...';
+
+  try {
+    await waitForPuter();
+    const assistantText = await sendToAIStreaming(chat);
+    // replace the last typing bubble content has already been set in streaming loop
+    // ensure final assistant message is in chat.messages
+    chat.messages.push({ role:'assistant', content:[{type:'text', text: assistantText}], ts: now() });
+    chat.updatedAt = now();
+    saveChats();
+    renderChatList(searchEl.value);
+    statusTxt.textContent = 'Ready';
+  } catch (err){
+    console.error('AI Error:', err);
+    // show error in last bubble
+    const last = chatArea.lastElementChild;
+    if(last) last.querySelector('div').textContent = '⚠️ Error: ' + (err?.toString?.() || JSON.stringify(err));
+    statusTxt.textContent = 'Error';
+  }
+}
+
+/* UI event wiring */
+sendBtn.addEventListener('click', sendPrompt);
+composer.addEventListener('keydown', e => {
+  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendPrompt(); }
+});
+newChatBtn.addEventListener('click', ()=> createChat());
+newChatLocalBtn.addEventListener('click', ()=> createChat());
+searchEl.addEventListener('input', ()=> renderChatList(searchEl.value));
+copyBtn.addEventListener('click', ()=>{
+  const chat = chats.find(c=>c.id===activeChatId); if(!chat) return;
+  const text = chat.messages.map(m => `${m.role.toUpperCase()}: ${safeTextFromMessage(m)}`).join('\n\n');
+  navigator.clipboard.writeText(text).then(()=> statusTxt.textContent='Copied');
+});
+downloadBtn.addEventListener('click', ()=>{
+  const chat = chats.find(c=>c.id===activeChatId); if(!chat) return;
+  const blob = new Blob([JSON.stringify(chat, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `${(chat.title||'chat').replace(/\s+/g,'_')}.json`; a.click(); URL.revokeObjectURL(url);
+});
+exportAllBtn.addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(chats, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href = url; a.download = 'smartai_all_chats.json'; a.click(); URL.revokeObjectURL(url);
+});
+clearAllBtn.addEventListener('click', ()=>{
+  if(!confirm('Delete ALL chats from local storage?')) return;
+  chats = []; activeChatId = null; saveChats(); renderChatList(); renderActiveChat();
+  statusTxt.textContent = 'Cleared';
+});
+
+/* Settings modal */
+settingsBtn.addEventListener('click', ()=> { settingsModal.classList.remove('hidden'); });
+closeSettings.addEventListener('click', ()=> { settingsModal.classList.add('hidden'); });
+cancelSettings.addEventListener('click', ()=> { settingsModal.classList.add('hidden'); });
+saveSettings.addEventListener('click', ()=> {
+  saveSettingsToStorage();
+  settingsModal.classList.add('hidden');
+  setTimeout(()=> { statusTxt.textContent = 'Settings saved'; }, 200);
+});
+
+/* delegated chat list pin/delete handling */
+chatListEl.addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-action]');
+  if(!btn) return;
+  const id = btn.dataset.id;
+  const action = btn.dataset.action;
+  if(action === 'del'){ if(confirm('Delete this chat?')) deleteChat(id); }
+  if(action === 'pin'){ togglePin(id); }
+});
+
+/* keyboard shortcuts */
+document.addEventListener('keydown', (e)=>{
+  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase() === 'k'){ e.preventDefault(); searchEl.focus(); searchEl.select(); }
+  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase() === 'n'){ e.preventDefault(); createChat(); }
+});
+
+/* helper: initial boot and UI population */
+function init(){
+  // populate settings fields
+  loadSettingsFromStorage();
+  // if no chats, create one
+  if(!chats || !chats.length) createChat();
+  else { activeChatId = chats[0].id; renderChatList(); renderActiveChat(); }
+  // reflect persisted settings
+  lucide.createIcons();
+  statusTxt.textContent = 'Ready';
+}
+init();
+
+/* Expose debug */
+window.SmartAI = { chats, saveChats, loadChats, createChat };
+
+</script>
 </body>
 </html>

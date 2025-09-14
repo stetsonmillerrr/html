@@ -1,566 +1,168 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Smart AI Chat+ (Polished & Smart)</title>
-
-<!-- Tailwind -->
-<script src="https://cdn.tailwindcss.com"></script>
-
-<!-- Puter AI -->
-<script src="https://js.puter.com/v2/"></script>
-
-<!-- Lucide icons -->
-<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-
-<!-- Marked for Markdown -->
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
-<!-- KaTeX for math rendering -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
-
-<style>
-  :root{
-    --glass: rgba(255,255,255,0.04);
-    --muted: rgba(255,255,255,0.6);
-  }
-  body{
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-    background: linear-gradient(135deg,#071029 0%, #1d1140 40%, #082032 100%);
-    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
-    color: white;
-  }
-  .glass{ background: var(--glass); backdrop-filter: blur(10px) saturate(120%); -webkit-backdrop-filter: blur(10px) saturate(120%); border: 1px solid rgba(255,255,255,0.06); }
-  .muted{ color: var(--muted); }
-  .typing-dots span{display:inline-block;width:7px;height:7px;margin-right:5px;border-radius:999px;background:white;opacity:.9;animation:bounce 1.15s infinite}
-  .typing-dots span:nth-child(2){animation-delay:.14s}.typing-dots span:nth-child(3){animation-delay:.28s}
-  @keyframes bounce{0%,80%,100%{transform:scale(.6);opacity:.5}40%{transform:scale(1);opacity:1}}
-  .fade-in{animation:fadeIn .28s cubic-bezier(.2,.9,.3,1) both}
-  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-  .chat-scroll{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.12) transparent}
-  .chat-scroll::-webkit-scrollbar{width:8px;height:8px}.chat-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:10px}
-  .katex{font-size:1.02em}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Next-Gen AI Assistant</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://js.puter.com/v2/"></script>
+  <style>
+    body {
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    }
+    .glass {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
 </head>
-<body class="h-screen flex">
+<body class="h-screen flex text-white font-sans">
 
-<!-- Sidebar -->
-<aside class="w-80 p-4 flex-shrink-0 glass border-r border-white/6 flex flex-col">
-  <div class="flex items-center justify-between mb-4">
-    <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow">
-        <i data-lucide="zap" class="w-5 h-5 text-white"></i>
-      </div>
-      <div>
-        <div class="font-semibold text-sm">Smart AI Chat+</div>
-        <div class="text-xs muted">Smarter, persistent, glassy</div>
-      </div>
+  <!-- Sidebar -->
+  <div class="w-64 glass border-r border-white/10 flex flex-col">
+    <div class="p-6 border-b border-white/10">
+      <h1 class="text-2xl font-bold">✨ Nova</h1>
+      <p class="text-sm text-gray-300">Your AI, smarter than ever</p>
     </div>
-    <div class="flex items-center gap-2">
-      <button id="newChatBtn" class="p-2 rounded-md hover:bg-white/5" title="New Chat"><i data-lucide="plus" class="w-5 h-5 text-white"></i></button>
-      <button id="settingsBtn" class="p-2 rounded-md hover:bg-white/5" title="Settings"><i data-lucide="settings" class="w-5 h-5 text-white"></i></button>
+    <div id="history" class="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-hide"></div>
+    <div class="p-4 border-t border-white/10">
+      <button onclick="clearMemory()" class="w-full py-2 rounded-lg glass text-sm hover:bg-white/10 transition">🗑️ Clear Memory</button>
     </div>
   </div>
 
-  <div class="mb-3">
-    <input id="searchInput" placeholder="Search chats (Ctrl/Cmd+K)" class="w-full px-3 py-2 rounded-lg bg-white/5 placeholder:text-white/60 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-  </div>
+  <!-- Chat -->
+  <div class="flex-1 flex flex-col">
+    <!-- Messages -->
+    <div id="chat" class="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide"></div>
 
-  <div id="chatList" class="flex-1 overflow-y-auto space-y-2 p-1"></div>
-
-  <div class="mt-4 pt-3 border-t border-white/6 text-xs muted">
-    <div class="flex items-center justify-between mb-2">
-      <div>Model</div>
-      <select id="modelSelect" class="bg-transparent text-white text-xs">
-        <option value="gpt-5-nano">gpt-5-nano</option>
-        <option value="gpt-4o-mini">gpt-4o-mini</option>
-      </select>
-    </div>
-    <div class="flex gap-2">
-      <button id="exportAllBtn" class="flex-1 px-3 py-2 rounded-md bg-white/6 hover:bg-white/8 text-sm">Export</button>
-      <button id="clearAllBtn" class="px-3 py-2 rounded-md bg-red-600/20 hover:bg-red-600/30 text-sm">Clear</button>
-    </div>
-    <div class="mt-3 text-xs muted">Tip: Ctrl/Cmd+N = New Chat • Ctrl/Cmd+K = Focus search</div>
-  </div>
-</aside>
-
-<!-- Main -->
-<main class="flex-1 flex flex-col">
-
-  <!-- Header -->
-  <header class="px-6 py-3 border-b border-white/6 glass flex items-center justify-between">
-    <div class="flex items-center gap-4">
-      <div>
-        <div id="chatTitle" class="text-lg font-semibold">New Chat</div>
-        <div id="chatMeta" class="text-xs muted">AI tutor · persistent memory</div>
-      </div>
-    </div>
-
-    <div class="flex items-center gap-2">
-      <div id="statusTxt" class="text-sm muted">Ready</div>
-      <button id="copyBtn" class="p-2 rounded-md hover:bg-white/5"><i data-lucide="copy" class="w-5 h-5 text-white"></i></button>
-      <button id="downloadBtn" class="p-2 rounded-md hover:bg-white/5"><i data-lucide="download" class="w-5 h-5 text-white"></i></button>
-    </div>
-  </header>
-
-  <!-- Chat area -->
-  <section id="chatArea" class="flex-1 overflow-y-auto p-6 chat-scroll space-y-4"></section>
-
-  <!-- Composer -->
-  <div class="p-4 border-t border-white/6 glass">
-    <div class="flex gap-3">
-      <textarea id="composer" rows="2" placeholder="Type your message... (Shift+Enter = newline)" class="flex-1 p-3 rounded-xl bg-white/5 text-sm placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-      <div class="flex flex-col gap-2">
-        <button id="sendBtn" class="p-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 hover:scale-[1.03] transition"><i data-lucide="send" class="w-5 h-5 text-white"></i></button>
-        <button id="newChatBottom" class="px-3 py-1 rounded-md bg-white/6 hover:bg-white/8 text-xs">New</button>
-      </div>
-    </div>
-    <div class="mt-2 flex items-center justify-between text-xs muted">
-      <div id="usageInfo">Messages saved locally</div>
-      <div>
-        <label class="inline-flex items-center gap-2 text-xs muted"><input id="persistToggle" type="checkbox" checked class="accent-indigo-400"> Persist</label>
-      </div>
+    <!-- Input -->
+    <div class="p-4 border-t border-white/10 glass">
+      <form id="chat-form" class="flex items-center space-x-2">
+        <input id="user-input" type="text" placeholder="Type your message..."
+          class="flex-1 p-3 rounded-xl bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400">
+        <button class="p-3 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 hover:opacity-80 transition">
+          ➤
+        </button>
+      </form>
     </div>
   </div>
-</main>
-
-<!-- Settings modal -->
-<div id="settingsModal" class="fixed inset-0 hidden items-center justify-center bg-black/60 z-50">
-  <div class="w-full max-w-3xl p-6 rounded-2xl glass">
-    <div class="flex items-center justify-between mb-4">
-      <h3 class="text-lg font-semibold">Settings</h3>
-      <button id="closeSettings" class="p-2 rounded-md hover:bg-white/5"><i data-lucide="x" class="w-5 h-5"></i></button>
-    </div>
-
-    <div class="grid grid-cols-2 gap-4">
-      <div>
-        <label class="text-sm muted mb-1 block">System Prompt (first prompt)</label>
-        <textarea id="systemPrompt" rows="6" class="w-full p-3 rounded-md bg-white/5 text-sm"></textarea>
-      </div>
-      <div>
-        <label class="text-sm muted mb-1 block">Puter API Key (optional)</label>
-        <input id="apiKeyInput" type="text" class="w-full p-3 rounded-md bg-white/5 text-sm" placeholder="Optional — stored locally" />
-        <div class="mt-4">
-          <label class="text-sm muted mb-1 block">Interface Theme</label>
-          <select id="themeSelect" class="w-full p-2 rounded-md bg-white/5 text-sm">
-            <option value="dark">Dark</option>
-            <option value="light">Light</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <div class="mt-4 flex justify-end gap-2">
-      <button id="saveSettings" class="px-4 py-2 rounded-md bg-indigo-600">Save</button>
-      <button id="cancelSettings" class="px-4 py-2 rounded-md bg-white/6">Cancel</button>
-    </div>
-  </div>
-</div>
 
 <script>
-/* -------------------------
-   Utilities & initialization
-   ------------------------- */
-lucide.createIcons();
+const MODEL = "gpt-5-nano"; 
+const SYSTEM_PROMPT = `
+You are Nova, a brilliant and friendly AI assistant.
+- Always helpful, clear, and concise.
+- Speak in a modern, approachable tone.
+- If math or algebra, show steps.
+- If asked for advice, be empathetic.
+- Never break character.
+`; 
 
-const UID = ()=> Date.now().toString(36) + Math.random().toString(36).slice(2,8);
-const qs = s => document.querySelector(s);
-const qsa = s => Array.from(document.querySelectorAll(s));
+// Load memory
+let memory = JSON.parse(localStorage.getItem("chatMemory")) || [];
 
-const chatListEl = qs('#chatList');
-const chatArea = qs('#chatArea');
-const composer = qs('#composer');
-const sendBtn = qs('#sendBtn');
-const newChatBtn = qs('#newChatBtn');
-const newChatBottom = qs('#newChatBottom');
-const searchInput = qs('#searchInput');
-const chatTitle = qs('#chatTitle');
-const chatMeta = qs('#chatMeta');
-const statusTxt = qs('#statusTxt');
-const copyBtn = qs('#copyBtn');
-const downloadBtn = qs('#downloadBtn');
-const persistToggle = qs('#persistToggle');
-const modelSelect = qs('#modelSelect');
-const settingsBtn = qs('#settingsBtn');
-const settingsModal = qs('#settingsModal');
-const closeSettings = qs('#closeSettings');
-const saveSettings = qs('#saveSettings');
-const cancelSettings = qs('#cancelSettings');
-const systemPromptInput = qs('#systemPrompt');
-const apiKeyInput = qs('#apiKeyInput');
-const themeSelect = qs('#themeSelect');
-const exportAllBtn = qs('#exportAllBtn');
-const clearAllBtn = qs('#clearAllBtn');
-const statusText = qs('#statusTxt');
-const searchEl = qs('#searchInput');
-const newChatLocalBtn = qs('#newChatBottom');
+// Elements
+const chat = document.getElementById("chat");
+const historyEl = document.getElementById("history");
 
-const STORAGE_KEY = 'smartai_chats_v3';
-const SETTINGS_KEY = 'smartai_settings_v3';
-const DEFAULT_SYSTEM_PROMPT = `You are Smart AI Chat+. You are a helpful, conversational AI tutor and assistant.
-- Give clear, step-by-step reasoning when teaching.
-- Use proper math notation (x^2, fractions, etc.).
-- If context exists, use it to improve answers.
-- Respond helpfully and concisely.`;
-
-let chats = []; // array of chat objects
-let activeChatId = null;
-
-/* Load & Save */
-function loadSettings(){
-  const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-  systemPromptInput.value = s.systemPrompt || DEFAULT_SYSTEM_PROMPT;
-  apiKeyInput.value = s.apiKey || '';
-  modelSelect.value = s.model || modelSelect.value;
-  themeSelect.value = s.theme || 'dark';
-}
-function saveSettings(){
-  const s = { systemPrompt: systemPromptInput.value, apiKey: apiKeyInput.value, model: modelSelect.value, theme: themeSelect.value };
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
-}
-function loadChats(){
-  try{ chats = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch(e){ chats=[]; }
-}
-function saveChats(){
-  if(!persistToggle.checked) return;
-  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(chats)); } catch(e){ console.warn('save error', e); }
-}
-
-/* Helpers */
-function now(){ return Date.now(); }
-function escapeHtml(s){ return (s||'').toString().replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
-function safeTextFromMsg(m){ return m.content.find(c=>c.type==='text')?.text || ''; }
-function autoTitleFromFirstUser(chat){ const first = chat.messages.find(m=>m.role==='user'); return first ? (safeTextFromMsg(first).slice(0,60) + (safeTextFromMsg(first).length>60?'…':'')) : 'New Chat'; }
-
-/* Convert simple math notation for AI (x2 -> x^2, 2x2 -> 2*x^2) */
-function convertMathNotationForAI(text){
-  if(!text) return text;
-  let t = text;
-  // insert * when missing (2x -> 2*x), but avoid inside words
-  t = t.replace(/(\d)([a-zA-Z])/g, '$1*$2');
-  // convert letter followed by number to caret (x2 -> x^2)
-  t = t.replace(/([a-zA-Z])(\d+)/g, '$1^$2');
-  return t;
-}
-
-/* Render a message (markdown + math) */
-function renderMessageHTML(rawText){
-  // allow markdown via marked and KaTeX auto-render for inline math ($...$)
-  const md = marked.parse(rawText || '');
-  // create a container and run auto-render on it
-  const container = document.createElement('div');
-  container.innerHTML = md;
-  // render math in element (auto-render will look for $...$ or \( ... \))
-  try {
-    renderMathInElement(container, {
-      delimiters: [
-        {left: "$$", right: "$$", display: true},
-        {left: "$", right: "$", display: false},
-        {left: "\\(", right: "\\)", display: false},
-        {left: "\\[", right: "\\]", display: true}
-      ],
-      throwOnError: false
-    });
-  } catch(e){
-    console.warn('KaTeX render error', e);
-  }
-  return container.innerHTML;
-}
-
-/* Create empty chat object */
-function createChatObject(initialText){
-  const id = UID();
-  const chat = {
-    id,
-    title: initialText ? (initialText.slice(0,40) + (initialText.length>40?'…':'')) : 'New Chat',
-    pinned: false,
-    updatedAt: now(),
-    messages: [
-      { role: 'system', content: [{ type:'text', text: systemPromptInput.value || DEFAULT_SYSTEM_PROMPT }], ts: now() }
-    ]
-  };
-  if(initialText){
-    chat.messages.push({ role:'user', content:[{type:'text', text:initialText}], ts: now() });
-  }
-  return chat;
-}
-
-/* UI render: chat list */
-function renderChatList(filter=''){
-  chatListEl.innerHTML = '';
-  const sorted = chats.slice().sort((a,b)=>{
-    if((b.pinned?1:0) - (a.pinned?1:0)) return (b.pinned?1:0)-(a.pinned?1:0);
-    return (b.updatedAt||0) - (a.updatedAt||0);
-  });
-  sorted.forEach(chat=>{
-    if(filter && !(chat.title||'').toLowerCase().includes(filter.toLowerCase())) return;
-    const item = document.createElement('div');
-    item.className = 'flex items-center gap-3 p-2 rounded-md hover:bg-white/5 cursor-pointer transition';
-    if(chat.id === activeChatId) item.classList.add('bg-white/5');
-    const icon = `<div class="w-9 h-9 rounded-lg bg-white/6 flex items-center justify-center"><i data-lucide="message-circle" class="w-4 h-4 text-white"></i></div>`;
-    item.innerHTML = `${icon}
-      <div class="flex-1 min-w-0">
-        <div class="text-sm font-medium truncate">${escapeHtml(chat.title||'New Chat')}</div>
-        <div class="text-xs muted">${chat.updatedAt?new Date(chat.updatedAt).toLocaleString():'No messages'}</div>
-      </div>
-      <div class="flex items-center gap-2">
-        <button data-action="pin" data-id="${chat.id}" class="p-1 rounded hover:bg-white/5"><i data-lucide="${chat.pinned ? 'star' : 'star'}" class="w-4 h-4 text-white"></i></button>
-        <button data-action="del" data-id="${chat.id}" class="p-1 rounded hover:bg-red-600/20"><i data-lucide="trash-2" class="w-4 h-4 text-white"></i></button>
-      </div>`;
-    item.addEventListener('click', e=>{
-      if(e.target.closest('button')) return;
-      openChat(chat.id);
-    });
-    chatListEl.appendChild(item);
-  });
-  lucide.createIcons();
-}
-
-/* UI render: active chat messages */
-function renderActiveChat(){
-  const chat = chats.find(c=>c.id === activeChatId);
-  if(!chat){ chatArea.innerHTML = ''; chatTitle.textContent = 'New Chat'; chatMeta.textContent = ''; return; }
-  chatTitle.textContent = chat.title || 'New Chat';
-  chatMeta.textContent = `Updated: ${chat.updatedAt?new Date(chat.updatedAt).toLocaleString():'n/a'}`;
-  chatArea.innerHTML = '';
-  chat.messages.forEach(m=>{
-    appendMessageToDOM(m);
-  });
-  chatArea.scrollTop = chatArea.scrollHeight;
-  lucide.createIcons();
-}
-
-/* Append message to DOM; if isTyping==true, append typing placeholder */
-function appendMessageToDOM(message, isTyping=false){
-  const wrapper = document.createElement('div');
-  wrapper.className = `w-full flex ${message.role==='user' ? 'justify-end':''} fade-in`;
-  const bubble = document.createElement('div');
-  bubble.className = `${message.role==='user' ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-black' : 'bg-gray-900/70 text-white border border-white/6'} max-w-[75%] p-3 rounded-2xl text-sm`;
-  if(isTyping){
-    bubble.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div>`;
-  } else {
-    const text = safeTextFromMsg(message);
-    // render markdown + math
-    bubble.innerHTML = renderMessageHTML(text);
-  }
-  wrapper.appendChild(bubble);
-  chatArea.appendChild(wrapper);
-  chatArea.scrollTop = chatArea.scrollHeight;
-  return bubble;
-}
-
-/* Create or open chat */
-function createChat(initialText){
-  const chat = createChatObject(initialText);
-  chats.unshift(chat);
-  activeChatId = chat.id;
-  saveChats();
-  renderChatList(searchEl.value);
-  renderActiveChat();
-  return chat;
-}
-function openChat(id){
-  activeChatId = id;
-  renderChatList(searchEl.value);
-  renderActiveChat();
-}
-function deleteChat(id){
-  if(!confirm('Delete this chat?')) return;
-  chats = chats.filter(c=>c.id !== id);
-  if(activeChatId === id) activeChatId = chats[0]?.id || null;
-  saveChats();
-  renderChatList(searchEl.value);
-  renderActiveChat();
-}
-function togglePin(id){
-  const c = chats.find(x=>x.id===id); if(!c) return; c.pinned = !c.pinned; saveChats(); renderChatList(searchEl.value);
-}
-
-/* Build messages array for Puter from chat.messages (with system first) */
-function buildMessagesForAPI(chat){
-  // Ensure system message is first. Puter expects array of message objects with role + content (array of type)
-  const msgs = chat.messages.map(m => ({ role: m.role, content: m.content }));
-  // If first message is not system, prepend system prompt
-  if(!msgs.length || msgs[0].role !== 'system'){
-    msgs.unshift({ role: 'system', content: [{ type: 'text', text: systemPromptInput.value || DEFAULT_SYSTEM_PROMPT }] });
-  }
-  return msgs;
-}
-
-/* Wait for puter to be ready */
-async function waitForPuter(){
-  if(window.puter?.ai) return true;
-  for(let i=0;i<50;i++){
-    if(window.puter?.ai) return true;
-    await new Promise(r=>setTimeout(r,200));
-  }
-  return !!window.puter?.ai;
-}
-
-/* Send to Puter with streaming fallback; returns assistant text or throws */
-async function sendToPuter(chat){
-  const msgs = buildMessagesForAPI(chat);
-  const options = { model: modelSelect.value || 'gpt-5-nano', stream: true };
-  const localKey = apiKeyInput.value?.trim();
-  if(localKey) options.apiKey = localKey;
-
-  // Pre-convert user math in last user message before sending
-  // Convert any user message content: apply convertMathNotationForAI to each text content before sending
-  const msgsForSend = msgs.map(m => {
-    const newContent = m.content.map(c => {
-      if(c.type === 'text' && m.role === 'user'){
-        return { type: 'text', text: convertMathNotationForAI(c.text) };
-      }
-      return c;
-    });
-    return { role: m.role, content: newContent };
-  });
-
-  // Try streaming first
-  try {
-    const resp = await puter.ai.chat(msgsForSend, options);
-    // streaming: async iterator
-    if(resp && typeof resp[Symbol.asyncIterator] === 'function'){
-      let out = '';
-      for await (const part of resp){
-        if(part?.text){
-          out += part.text;
-          // update last bubble
-          const last = chatArea.lastElementChild;
-          if(last) last.querySelector('div').innerHTML = renderMessageHTML(out);
-          chatArea.scrollTop = chatArea.scrollHeight;
-        }
-      }
-      return out;
+// Render memory on load
+function renderMemory() {
+  chat.innerHTML = "";
+  historyEl.innerHTML = "";
+  memory.forEach((msg, i) => {
+    if (msg.role !== "system") addMessage(msg.role, msg.content, false);
+    if (msg.role === "user") {
+      const btn = document.createElement("button");
+      btn.textContent = msg.content.slice(0,30) + "...";
+      btn.className = "w-full text-left text-sm glass px-3 py-2 rounded hover:bg-white/10 transition";
+      btn.onclick = () => scrollToMessage(i);
+      historyEl.appendChild(btn);
     }
-    // fallback non-iterator returns object
-    if(resp?.output_text) return resp.output_text;
-    if(resp?.output?.[0]?.content?.[0]?.text) return resp.output[0].content[0].text;
-    return typeof resp === 'string' ? resp : JSON.stringify(resp);
-  } catch(err){
-    // streaming failed — attempt one-shot without stream flag
-    console.warn('Streaming failed, trying one-shot:', err);
-    try {
-      const one = await puter.ai.chat(msgsForSend, { model: options.model, stream: false, apiKey: options.apiKey });
-      if(one?.output_text) return one.output_text;
-      if(one?.output?.[0]?.content?.[0]?.text) return one.output[0].content[0].text;
-      return typeof one === 'string' ? one : JSON.stringify(one);
-    } catch(e2){
-      // try to extract message
-      const message = e2?.error?.message || e2?.message || JSON.stringify(e2);
-      throw message;
-    }
+  });
+}
+renderMemory();
+
+function scrollToMessage(index) {
+  const el = document.querySelector(`[data-idx="${index}"]`);
+  if (el) el.scrollIntoView({ behavior: "smooth" });
+}
+
+function saveMemory() {
+  localStorage.setItem("chatMemory", JSON.stringify(memory));
+}
+
+function clearMemory() {
+  memory = [{ role: "system", content: SYSTEM_PROMPT }];
+  saveMemory();
+  renderMemory();
+}
+
+function addMessage(role, text, push=true) {
+  const idx = memory.length;
+  const bubble = document.createElement("div");
+  bubble.dataset.idx = idx;
+  bubble.className = `max-w-xl px-4 py-3 rounded-2xl shadow-md glass animate-fade-in
+    ${role === "user" ? "self-end bg-blue-600/60" : "self-start bg-purple-600/40"}`;
+  bubble.innerHTML = `<p class="whitespace-pre-line">${text}</p>`;
+  chat.appendChild(bubble);
+  chat.scrollTop = chat.scrollHeight;
+
+  if (push) {
+    memory.push({ role, content: text });
+    saveMemory();
+    renderMemory();
   }
 }
 
-/* Send prompt from composer */
-async function sendPrompt(){
-  const chat = chats.find(c=>c.id===activeChatId) || createChat();
-  const textRaw = composer.value.trim();
-  if(!textRaw) return;
-  composer.value = '';
+// Send to AI
+async function askAI(input) {
+  addMessage("user", input);
 
-  // push user message to chat.messages
-  const userMsg = { role:'user', content:[{ type:'text', text:textRaw }], ts: now() };
-  chat.messages.push(userMsg);
-  chat.updatedAt = now();
-  saveChats();
+  // Prepare conversation
+  const messages = memory.map(m => ({ role: m.role, content: [{ type: "text", text: m.content }] }));
 
-  // append user bubble
-  appendMessageToDOM(userMsg);
-  // append typing bubble for assistant
-  appendMessageToDOM({ role:'assistant', content:[] }, true);
-  statusText.textContent = 'Thinking...';
+  let aiText = "";
+  const bubble = document.createElement("div");
+  bubble.className = "max-w-xl px-4 py-3 rounded-2xl shadow-md glass self-start bg-purple-600/40 animate-fade-in";
+  bubble.innerHTML = `<p class="whitespace-pre-line">...</p>`;
+  chat.appendChild(bubble);
+  chat.scrollTop = chat.scrollHeight;
 
   try {
-    await waitForPuter();
-    // send and stream
-    const assistantText = await sendToPuter(chat);
-    // update last bubble already updated in streaming; ensure final state
-    chat.messages.push({ role:'assistant', content:[{ type:'text', text: assistantText }], ts: now() });
-    chat.updatedAt = now();
-    saveChats();
-    renderChatList(searchEl.value);
-    statusText.textContent = 'Ready';
-  } catch(err){
-    console.error('AI error', err);
-    const last = chatArea.lastElementChild;
-    if(last) last.querySelector('div').textContent = '⚠️ Error: ' + (err || 'Unknown');
-    statusText.textContent = 'Error';
+    const resp = await puter.ai.chat(messages, { model: MODEL, stream: true });
+    for await (const part of resp) {
+      if (part?.text) {
+        aiText += part.text;
+        bubble.innerHTML = `<p class="whitespace-pre-line">${aiText}</p>`;
+        chat.scrollTop = chat.scrollHeight;
+      }
+    }
+    memory.push({ role: "assistant", content: aiText });
+    saveMemory();
+    renderMemory();
+  } catch (e) {
+    console.error("AI error:", e);
+    bubble.innerHTML = `<p class="text-red-400">⚠️ Error: ${e.message || "Failed to connect"}</p>`;
   }
 }
 
-/* UI actions */
-sendBtn.addEventListener('click', sendPrompt);
-composer.addEventListener('keydown', e => { if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendPrompt(); }});
-newChatBtn.addEventListener('click', ()=> createChat());
-newChatBottom.addEventListener('click', ()=> createChat());
-searchEl.addEventListener('input', ()=> renderChatList(searchEl.value));
-copyBtn.addEventListener('click', ()=>{
-  const chat = chats.find(c=>c.id===activeChatId); if(!chat) return;
-  const plain = chat.messages.map(m=>`${m.role.toUpperCase()}: ${safeTextFromMsg(m)}`).join('\n\n');
-  navigator.clipboard.writeText(plain).then(()=> statusText.textContent='Copied');
-});
-downloadBtn.addEventListener('click', ()=>{
-  const chat = chats.find(c=>c.id===activeChatId); if(!chat) return;
-  const blob = new Blob([JSON.stringify(chat, null, 2)], { type:'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = `${(chat.title||'chat').replace(/\s+/g,'_')}.json`; a.click(); URL.revokeObjectURL(url);
-});
-exportAllBtn.addEventListener('click', ()=>{
-  const blob = new Blob([JSON.stringify(chats, null, 2)], { type:'application/json' });
-  const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='smartai_all_chats.json'; a.click(); URL.revokeObjectURL(url);
-});
-clearAllBtn.addEventListener('click', ()=> { if(!confirm('Delete ALL chats?')) return; chats=[]; activeChatId=null; saveChats(); renderChatList(); renderActiveChat(); });
-
-/* Settings modal */
-settingsBtn.addEventListener('click', ()=> settingsModal.classList.remove('hidden'));
-closeSettings.addEventListener('click', ()=> settingsModal.classList.add('hidden'));
-cancelSettings.addEventListener('click', ()=> settingsModal.classList.add('hidden'));
-saveSettings.addEventListener('click', ()=> { saveSettings(); settingsModal.classList.add('hidden'); statusText.textContent='Settings saved'; });
-
-/* Chat list delegated actions (pin/delete) */
-chatListEl.addEventListener('click', e => {
-  const btn = e.target.closest('button[data-action]');
-  if(!btn) return;
-  const id = btn.dataset.id;
-  const act = btn.dataset.action;
-  if(act === 'del'){ deleteChat(id); }
-  if(act === 'pin'){ togglePin(id); }
+// Form handler
+document.getElementById("chat-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const input = document.getElementById("user-input");
+  if (!input.value.trim()) return;
+  askAI(input.value.trim());
+  input.value = "";
 });
 
-/* delegated open chat on whole item click handled in renderChatList items */
-
-/* Keyboard shortcuts */
-document.addEventListener('keydown', e=>{
-  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase() === 'k'){ e.preventDefault(); searchEl.focus(); searchEl.select(); }
-  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase() === 'n'){ e.preventDefault(); createChat(); }
-});
-
-/* Chat list click handler above used for pin/delete; ensure icons render */
-chatListEl.addEventListener('click', e=>{ lucide.createIcons(); });
-
-/* Delegated pin/delete on render (buttons have data-action/data-id) handled earlier */
-
-/* Utilities for initial load */
-function init(){
-  loadSettings();
-  loadChats();
-  if(!chats.length) createChat();
-  else { activeChatId = chats[0].id; renderChatList(); renderActiveChat(); }
-  lucide.createIcons();
-  statusText.textContent = 'Ready';
-  // ensure systemPrompt input shows current setting
-  systemPromptInput.value = systemPromptInput.value || DEFAULT_SYSTEM_PROMPT;
+// Initialize system prompt if missing
+if (!memory.find(m => m.role === "system")) {
+  memory.unshift({ role: "system", content: SYSTEM_PROMPT });
+  saveMemory();
 }
-init();
-
-/* Save automatically when before unload */
-window.addEventListener('beforeunload', ()=> saveChats() );
-
 </script>
 </body>
 </html>

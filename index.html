@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Next-Gen AI Assistant</title>
+  <title>Nova AI</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://js.puter.com/v2/"></script>
   <style>
@@ -17,19 +17,22 @@
     }
     .scrollbar-hide::-webkit-scrollbar { display: none; }
     .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    @keyframes fadeIn { from {opacity:0; transform:translateY(10px);} to {opacity:1; transform:translateY(0);} }
+    .animate-fade-in { animation: fadeIn 0.3s ease-out; }
   </style>
 </head>
 <body class="h-screen flex text-white font-sans">
 
   <!-- Sidebar -->
-  <div class="w-64 glass border-r border-white/10 flex flex-col">
+  <div class="w-72 glass border-r border-white/10 flex flex-col">
     <div class="p-6 border-b border-white/10">
-      <h1 class="text-2xl font-bold">✨ Nova</h1>
-      <p class="text-sm text-gray-300">Your AI, smarter than ever</p>
+      <h1 class="text-2xl font-bold flex items-center gap-2">✨ Nova</h1>
+      <p class="text-sm text-gray-300">Smarter than ChatGPT</p>
     </div>
     <div id="history" class="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-hide"></div>
-    <div class="p-4 border-t border-white/10">
+    <div class="p-4 border-t border-white/10 space-y-2">
       <button onclick="clearMemory()" class="w-full py-2 rounded-lg glass text-sm hover:bg-white/10 transition">🗑️ Clear Memory</button>
+      <button onclick="showSummaries()" class="w-full py-2 rounded-lg glass text-sm hover:bg-white/10 transition">🧠 View Summaries</button>
     </div>
   </div>
 
@@ -42,7 +45,7 @@
     <div class="p-4 border-t border-white/10 glass">
       <form id="chat-form" class="flex items-center space-x-2">
         <input id="user-input" type="text" placeholder="Type your message..."
-          class="flex-1 p-3 rounded-xl bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400">
+          class="flex-1 p-3 rounded-xl bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400">
         <button class="p-3 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 hover:opacity-80 transition">
           ➤
         </button>
@@ -54,26 +57,27 @@
 const MODEL = "gpt-5-nano"; 
 const SYSTEM_PROMPT = `
 You are Nova, a brilliant and friendly AI assistant.
-- Always helpful, clear, and concise.
-- Speak in a modern, approachable tone.
-- If math or algebra, show steps.
-- If asked for advice, be empathetic.
-- Never break character.
-`; 
+- Always helpful, concise, and modern in tone.
+- If solving math/algebra, show steps clearly.
+- If asked for advice, respond with empathy.
+- You can handle images if provided as links.
+- Always stay in character.
+`;
 
 // Load memory
 let memory = JSON.parse(localStorage.getItem("chatMemory")) || [];
+let summaries = JSON.parse(localStorage.getItem("chatSummaries")) || [];
 
 // Elements
 const chat = document.getElementById("chat");
 const historyEl = document.getElementById("history");
 
-// Render memory on load
+// Render memory
 function renderMemory() {
   chat.innerHTML = "";
   historyEl.innerHTML = "";
   memory.forEach((msg, i) => {
-    if (msg.role !== "system") addMessage(msg.role, msg.content, false);
+    if (msg.role !== "system") addMessage(msg.role, msg.content, false, i);
     if (msg.role === "user") {
       const btn = document.createElement("button");
       btn.textContent = msg.content.slice(0,30) + "...";
@@ -92,18 +96,27 @@ function scrollToMessage(index) {
 
 function saveMemory() {
   localStorage.setItem("chatMemory", JSON.stringify(memory));
+  localStorage.setItem("chatSummaries", JSON.stringify(summaries));
 }
 
 function clearMemory() {
   memory = [{ role: "system", content: SYSTEM_PROMPT }];
+  summaries = [];
   saveMemory();
   renderMemory();
 }
 
-function addMessage(role, text, push=true) {
-  const idx = memory.length;
+function showSummaries() {
+  if (!summaries.length) {
+    alert("No summaries yet.");
+    return;
+  }
+  alert("🧠 Summaries:\n\n" + summaries.join("\n\n"));
+}
+
+function addMessage(role, text, push=true, idx=null) {
   const bubble = document.createElement("div");
-  bubble.dataset.idx = idx;
+  bubble.dataset.idx = idx ?? memory.length;
   bubble.className = `max-w-xl px-4 py-3 rounded-2xl shadow-md glass animate-fade-in
     ${role === "user" ? "self-end bg-blue-600/60" : "self-start bg-purple-600/40"}`;
   bubble.innerHTML = `<p class="whitespace-pre-line">${text}</p>`;
@@ -117,12 +130,39 @@ function addMessage(role, text, push=true) {
   }
 }
 
-// Send to AI
+// Summarize memory when too long
+async function maybeSummarize() {
+  if (memory.length < 20) return;
+  const oldMsgs = memory.slice(1, -10);
+  if (oldMsgs.length === 0) return;
+
+  const textBlock = oldMsgs.map(m => `${m.role}: ${m.content}`).join("\n");
+
+  try {
+    const resp = await puter.ai.chat([
+      { role: "system", content: [{type:"text", text:"Summarize this chat history briefly, preserving key facts, tone, and context. Keep under 100 words."}] },
+      { role: "user", content: [{type:"text", text: textBlock}] }
+    ], { model: MODEL });
+
+    const summary = (await resp).text || "Summary unavailable.";
+    summaries.push(summary);
+    memory = [memory[0], ...memory.slice(-10)];
+    saveMemory();
+    console.log("Memory summarized:", summary);
+  } catch(e) {
+    console.error("Summarization failed:", e);
+  }
+}
+
+// Ask AI
 async function askAI(input) {
   addMessage("user", input);
 
-  // Prepare conversation
-  const messages = memory.map(m => ({ role: m.role, content: [{ type: "text", text: m.content }] }));
+  const messages = [
+    { role: "system", content: [{ type: "text", text: SYSTEM_PROMPT }] },
+    ...summaries.map(s => ({ role: "system", content: [{ type: "text", text: "Summary of past chats: " + s }] })),
+    ...memory.filter(m => m.role !== "system").map(m => ({ role: m.role, content: [{ type: "text", text: m.content }] }))
+  ];
 
   let aiText = "";
   const bubble = document.createElement("div");
@@ -143,6 +183,7 @@ async function askAI(input) {
     memory.push({ role: "assistant", content: aiText });
     saveMemory();
     renderMemory();
+    maybeSummarize();
   } catch (e) {
     console.error("AI error:", e);
     bubble.innerHTML = `<p class="text-red-400">⚠️ Error: ${e.message || "Failed to connect"}</p>`;
